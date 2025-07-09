@@ -136,11 +136,11 @@ const Home = () => {
                 No manual oversight required—just results.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Button className="btn-primary text-lg px-8 py-3">
+                <Button className="btn-primary text-lg px-8 py-3" onClick={() => window.location.href = '/get-started'}>
                   Get Started Today
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
-                <Button className="btn-ghost text-lg px-8 py-3">
+                <Button className="btn-ghost text-lg px-8 py-3" onClick={() => window.location.href = '/watch-demo'}>
                   <Play className="mr-2 w-5 h-5" />
                   Watch Demo
                 </Button>

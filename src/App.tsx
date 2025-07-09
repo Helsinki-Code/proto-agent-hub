@@ -16,6 +16,9 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import DeveloperGuides from "./pages/DeveloperGuides";
 import Resources from "./pages/Resources";
+import GetStarted from "./pages/GetStarted";
+import WatchDemo from "./pages/WatchDemo";
+import ScheduleDemo from "./pages/ScheduleDemo";
 
 // Service Pages
 import WorkflowAutomation from "./pages/services/WorkflowAutomation";
@@ -54,6 +57,9 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/developer-guides" element={<DeveloperGuides />} />
             <Route path="/resources" element={<Resources />} />
+            <Route path="/get-started" element={<GetStarted />} />
+            <Route path="/watch-demo" element={<WatchDemo />} />
+            <Route path="/schedule-demo" element={<ScheduleDemo />} />
             
             {/* Service Pages */}
             <Route path="/services/workflow-automation" element={<WorkflowAutomation />} />
