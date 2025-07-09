@@ -258,7 +258,21 @@ const UseCases = () => {
                   
                   {/* Actions */}
                   <div className="flex space-x-2">
-                    <Button className="btn-primary flex-1 text-sm">
+                    <Button 
+                      className="btn-primary flex-1 text-sm"
+                      onClick={() => {
+                        const useCaseRoutes = [
+                          '/use-cases/automated-loan-processing',
+                          '/use-cases/patient-care-coordination',
+                          '/use-cases/dynamic-pricing',
+                          '/use-cases/predictive-maintenance',
+                          '/use-cases/contract-analysis',
+                          '/use-cases/talent-matching',
+                          '/use-cases/personalized-learning'
+                        ];
+                        window.location.href = useCaseRoutes[index];
+                      }}
+                    >
                       See Case Study
                     </Button>
                     <Button className="btn-ghost flex-1 text-sm">

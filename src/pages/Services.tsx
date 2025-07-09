@@ -160,7 +160,17 @@ const Services = () => {
                     <Badge variant="outline" className="mb-4">
                       {service.pricing}
                     </Badge>
-                    <Button className="btn-ghost w-full">
+                    <Button className="btn-ghost w-full" onClick={() => {
+                      const serviceRoutes = [
+                        '/services/workflow-automation',
+                        '/services/chatbots', 
+                        '/services/llm-integration',
+                        '/services/ai-strategy',
+                        '/services/cloud-deployment',
+                        '/services/training'
+                      ];
+                      window.location.href = serviceRoutes[index];
+                    }}>
                       Learn More
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>

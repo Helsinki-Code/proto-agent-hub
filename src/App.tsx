@@ -26,6 +26,12 @@ import Training from "./pages/services/Training";
 
 // Use Cases
 import AutomatedLoanProcessing from "./pages/use-cases/AutomatedLoanProcessing";
+import PatientCareCoordination from "./pages/use-cases/PatientCareCoordination";
+import DynamicPricing from "./pages/use-cases/DynamicPricing";
+import PredictiveMaintenance from "./pages/use-cases/PredictiveMaintenance";
+import ContractAnalysis from "./pages/use-cases/ContractAnalysis";
+import TalentMatching from "./pages/use-cases/TalentMatching";
+import PersonalizedLearning from "./pages/use-cases/PersonalizedLearning";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +64,12 @@ const App = () => (
             
             {/* Use Case Pages */}
             <Route path="/use-cases/automated-loan-processing" element={<AutomatedLoanProcessing />} />
+            <Route path="/use-cases/patient-care-coordination" element={<PatientCareCoordination />} />
+            <Route path="/use-cases/dynamic-pricing" element={<DynamicPricing />} />
+            <Route path="/use-cases/predictive-maintenance" element={<PredictiveMaintenance />} />
+            <Route path="/use-cases/contract-analysis" element={<ContractAnalysis />} />
+            <Route path="/use-cases/talent-matching" element={<TalentMatching />} />
+            <Route path="/use-cases/personalized-learning" element={<PersonalizedLearning />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
