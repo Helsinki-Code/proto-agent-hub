@@ -68,16 +68,37 @@ const GetStarted = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast({
-      title: "🎉 Welcome to the AI Revolution!",
-      description: "Your journey starts now. Our team will contact you within 24 hours!",
-    });
-    
-    setIsSubmitting(false);
-    setStep(4);
+    try {
+      // Send notification email to info@agentic-ai.ltd
+      const notificationData = {
+        to: "info@agentic-ai.ltd",
+        subject: "New Journey Started - Lead Notification",
+        formData: formData,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Note: This requires backend integration to actually send emails
+      console.log("New lead submission:", notificationData);
+      
+      // Simulate form submission
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast({
+        title: "🎉 Welcome to the AI Revolution!",
+        description: "Your journey starts now. Our team will contact you within 24 hours!",
+      });
+      
+      setIsSubmitting(false);
+      setStep(4);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    }
   };
 
   const industries = [

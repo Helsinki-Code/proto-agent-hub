@@ -19,25 +19,25 @@ const Contact = () => {
     {
       icon: Mail,
       title: "Email",
-      details: "info@agenticai.com",
+      details: "info@agentic-ai.ltd",
       description: "Get in touch for general inquiries"
     },
     {
       icon: Phone,
       title: "Phone",
-      details: "+1 (555) 123-4567",
+      details: "+44 7771970567",
       description: "Speak with our team directly"
     },
     {
       icon: MapPin,
       title: "Office",
-      details: "123 AI Innovation Drive, San Francisco, CA 94105",
-      description: "Visit our headquarters"
+      details: "25 Cavendish Square, London W1G 0PN, United Kingdom",
+      description: "Visit our London headquarters"
     },
     {
       icon: Clock,
       title: "Hours",
-      details: "Mon-Fri: 9AM-6PM PST",
+      details: "Mon-Fri: 9AM-6PM GMT",
       description: "Our team is available during business hours"
     }
   ];
@@ -234,7 +234,7 @@ const Contact = () => {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Visit Our Office</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Located in the heart of San Francisco's tech district, our office is always open to visitors.
+              Located in the heart of London's business district, our office is always open to visitors.
             </p>
           </div>
           <div className="card-gradient rounded-lg p-8 glow-primary">
@@ -243,8 +243,8 @@ const Contact = () => {
                 <MapPin className="w-16 h-16 text-primary mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Interactive Map</h3>
                 <p className="text-muted-foreground">
-                  123 AI Innovation Drive<br />
-                  San Francisco, CA 94105
+                  25 Cavendish Square<br />
+                  London W1G 0PN, United Kingdom
                 </p>
                 <Button className="btn-primary mt-4">
                   Get Directions
