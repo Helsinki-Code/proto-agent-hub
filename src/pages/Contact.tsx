@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Mail, 
   Phone, 
@@ -11,15 +13,27 @@ import {
   Calendar, 
   MessageSquare,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from "lucide-react";
 
 const Contact = () => {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    company: "",
+    subject: "",
+    message: ""
+  });
+
   const contactInfo = [
     {
       icon: Mail,
       title: "Email",
-      details: "info@agentic-ai.ltd",
+      details: "support@agentic-ai.ltd",
       description: "Get in touch for general inquiries"
     },
     {
@@ -65,6 +79,69 @@ const Contact = () => {
     }
   ];
 
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.message) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          timestamp: new Date().toISOString()
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      // Success
+      toast({
+        title: "Message Sent Successfully!",
+        description: "Thank you for contacting us. We'll get back to you within 24 hours.",
+      });
+
+      // Reset form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        company: "",
+        subject: "",
+        message: ""
+      });
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again or contact us directly.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -93,36 +170,53 @@ const Contact = () => {
             <Card className="card-gradient border-border glow-primary">
               <CardContent className="p-8">
                 <h2 className="text-2xl font-bold mb-6">Send Us a Message</h2>
-                <form className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">First Name</label>
+                      <label className="block text-sm font-medium mb-2">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
                       <Input 
+                        value={formData.firstName}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
                         placeholder="John"
                         className="bg-background/50 border-border"
+                        required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Last Name</label>
+                      <label className="block text-sm font-medium mb-2">
+                        Last Name <span className="text-red-500">*</span>
+                      </label>
                       <Input 
+                        value={formData.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
                         placeholder="Doe"
                         className="bg-background/50 border-border"
+                        required
                       />
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-2">Email</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Email <span className="text-red-500">*</span>
+                    </label>
                     <Input 
                       type="email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
                       placeholder="john@company.com"
                       className="bg-background/50 border-border"
+                      required
                     />
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium mb-2">Company</label>
                     <Input 
+                      value={formData.company}
+                      onChange={(e) => handleInputChange('company', e.target.value)}
                       placeholder="Your Company"
                       className="bg-background/50 border-border"
                     />
@@ -131,23 +225,43 @@ const Contact = () => {
                   <div>
                     <label className="block text-sm font-medium mb-2">Subject</label>
                     <Input 
+                      value={formData.subject}
+                      onChange={(e) => handleInputChange('subject', e.target.value)}
                       placeholder="How can we help?"
                       className="bg-background/50 border-border"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-2">Message</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Message <span className="text-red-500">*</span>
+                    </label>
                     <Textarea 
+                      value={formData.message}
+                      onChange={(e) => handleInputChange('message', e.target.value)}
                       placeholder="Tell us about your project and how we can help..."
                       rows={5}
                       className="bg-background/50 border-border resize-none"
+                      required
                     />
                   </div>
                   
-                  <Button className="btn-primary w-full">
-                    <Send className="mr-2 w-4 h-4" />
-                    Send Message
+                  <Button 
+                    type="submit" 
+                    className="btn-primary w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="mr-2 w-4 h-4" />
+                        Send Message
+                      </>
+                    )}
                   </Button>
                 </form>
               </CardContent>
@@ -237,19 +351,11 @@ const Contact = () => {
               Located in the heart of London's business district, our office is always open to visitors.
             </p>
           </div>
-          <div className="card-gradient rounded-lg p-8 glow-primary">
-            <div className="bg-muted/20 rounded-lg h-96 flex items-center justify-center">
-              <div className="text-center">
-                <MapPin className="w-16 h-16 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Interactive Map</h3>
-                <p className="text-muted-foreground">
-                  25 Cavendish Square<br />
-                  London W1G 0PN, United Kingdom
-                </p>
-                <Button className="btn-primary mt-4">
-                  Get Directions
-                </Button>
-              </div>
+          <div className="w-full h-96 bg-muted/20 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <MapPin className="w-16 h-16 text-primary mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">25 Cavendish Square</h3>
+              <p className="text-muted-foreground">London W1G 0PN, United Kingdom</p>
             </div>
           </div>
         </div>
