@@ -1,5 +1,4 @@
 import express from 'express';
-import { createTransport } from 'nodemailer';
 import cors from 'cors';
 import 'dotenv/config';
 
@@ -9,136 +8,89 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// SiteGround SMTP Configuration
-const transporter = createTransport({
-  host: 'mail.agentic-ai.ltd',
-  port: 465,
-  secure: true, // true for 465, false for other ports
-  tls: {
-    rejectUnauthorized: false
-  },
-  auth: {
-    user: 'info@agentic-ai.ltd',
-    pass: 'Josh100!', // Your SiteGround email password
-  },
-});
-
-// Email Templates
-const createNotificationEmail = (formData) => {
-  return {
-    from: process.env.SMTP_USER || 'info@agentic-ai.ltd',
-    to: 'info@agentic-ai.ltd',
-    subject: `New Contact Form Submission - ${formData.subject || 'No Subject'}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0;">New Contact Form Submission</h1>
-        </div>
-        
-        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
-          <div style="background: white; padding: 25px; border-radius: 8px; border-left: 4px solid #667eea;">
-            <h2 style="color: #333; margin-top: 0;">Contact Details</h2>
-            
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Name:</td>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; color: #333;">${formData.firstName} ${formData.lastName}</td>
-              </tr>
-              <tr>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Email:</td>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; color: #333;">${formData.email}</td>
-              </tr>
-              <tr>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Company:</td>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; color: #333;">${formData.company || 'Not specified'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Subject:</td>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; color: #333;">${formData.subject || 'No subject'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Submitted:</td>
-                <td style="padding: 12px 0; border-bottom: 1px solid #eee; color: #333;">${new Date().toLocaleString()}</td>
-              </tr>
-            </table>
-          </div>
-          
-          <div style="background: white; padding: 25px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #28a745;">
-            <h3 style="color: #333; margin-top: 0;">Message</h3>
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 5px; border: 1px solid #e9ecef;">
-              <p style="color: #333; line-height: 1.6; margin: 0; white-space: pre-wrap;">${formData.message}</p>
-            </div>
-          </div>
-          
-          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-            <p style="color: #666; font-size: 14px;">
-              This email was sent automatically from your website contact form.
-            </p>
-          </div>
-        </div>
-      </div>
-    `
-  };
+// EmailJS configuration - Uses environment variables
+const EMAILJS_CONFIG = {
+  serviceId: process.env.EMAILJS_SERVICE_ID,
+  templateId: process.env.EMAILJS_TEMPLATE_ID,
+  userId: process.env.EMAILJS_USER_ID,
+  accessToken: process.env.EMAILJS_ACCESS_TOKEN
 };
 
-const createAcknowledgmentEmail = (formData) => {
-  return {
-    from: process.env.SMTP_USER || 'info@agentic-ai.ltd',
-    to: formData.email,
-    subject: 'Thank you for contacting AgenticAI - We\'ll be in touch soon!',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0;">Thank You for Contacting Us!</h1>
-        </div>
-        
-        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
-          <div style="background: white; padding: 25px; border-radius: 8px;">
-            <h2 style="color: #333; margin-top: 0;">Hello ${formData.firstName},</h2>
-            
-            <p style="color: #555; line-height: 1.6; font-size: 16px;">
-              Thank you for reaching out to AgenticAI! We've received your message and our team will get back to you within <strong>24 hours</strong>.
-            </p>
-            
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
-              <h3 style="color: #333; margin-top: 0;">Your Message Summary</h3>
-              <p style="color: #555; margin: 5px 0;"><strong>Subject:</strong> ${formData.subject || 'General Inquiry'}</p>
-              <p style="color: #555; margin: 5px 0;"><strong>Company:</strong> ${formData.company || 'Not specified'}</p>
-              <p style="color: #555; margin: 5px 0;"><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
-            </div>
-            
-            <p style="color: #555; line-height: 1.6; font-size: 16px;">
-              In the meantime, feel free to explore our resources or schedule a demo directly:
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://yourdomain.com/schedule-demo" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                Schedule a Demo
-              </a>
-            </div>
-            
-            <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
-              <h3 style="color: #155724; margin-top: 0;">Contact Information</h3>
-              <p style="color: #155724; margin: 5px 0;"><strong>Email:</strong> support@agentic-ai.ltd</p>
-              <p style="color: #155724; margin: 5px 0;"><strong>Phone:</strong> +44 7771970567</p>
-              <p style="color: #155724; margin: 5px 0;"><strong>Office:</strong> 25 Cavendish Square, London W1G 0PN, UK</p>
-            </div>
-            
-            <p style="color: #555; line-height: 1.6; font-size: 16px;">
-              Best regards,<br>
-              <strong>The AgenticAI Team</strong>
-            </p>
-          </div>
-          
-          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-            <p style="color: #666; font-size: 14px;">
-              This is an automated response. Please do not reply to this email.
-            </p>
-          </div>
-        </div>
-      </div>
-    `
-  };
+// Function to send email via EmailJS API
+const sendEmailViaEmailJS = async (formData) => {
+  try {
+    const emailData = {
+      service_id: EMAILJS_CONFIG.serviceId,
+      template_id: EMAILJS_CONFIG.templateId,
+      user_id: EMAILJS_CONFIG.userId,
+      accessToken: EMAILJS_CONFIG.accessToken,
+      template_params: {
+        to_name: 'AgenticAI Team',
+        from_name: `${formData.firstName} ${formData.lastName}`,
+        from_email: formData.email,
+        company: formData.company || 'Not specified',
+        subject: formData.subject || 'Contact Form Submission',
+        message: formData.message,
+        reply_to: formData.email,
+        to_email: 'info@agentic-ai.ltd'
+      }
+    };
+
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`EmailJS API error: ${response.status}`);
+    }
+
+    return { success: true, message: 'Email sent successfully' };
+  } catch (error) {
+    console.error('EmailJS send error:', error);
+    throw error;
+  }
+};
+
+// Function to send acknowledgment email to user
+const sendAcknowledgmentEmail = async (formData) => {
+  try {
+    const ackData = {
+      service_id: EMAILJS_CONFIG.serviceId,
+      template_id: process.env.EMAILJS_ACK_TEMPLATE_ID,
+      user_id: EMAILJS_CONFIG.userId,
+      accessToken: EMAILJS_CONFIG.accessToken,
+      template_params: {
+        to_name: formData.firstName,
+        to_email: formData.email,
+        from_name: 'AgenticAI Team',
+        subject: 'Thank you for contacting AgenticAI',
+        company: formData.company || 'Not specified',
+        original_subject: formData.subject || 'General Inquiry',
+        message: `Hello ${formData.firstName},\n\nThank you for reaching out to AgenticAI! We've received your message and our team will get back to you within 24 hours.\n\nYour inquiry details:\n- Subject: ${formData.subject || 'General Inquiry'}\n- Company: ${formData.company || 'Not specified'}\n- Message: ${formData.message}\n\nBest regards,\nThe AgenticAI Team`
+      }
+    };
+
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(ackData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`EmailJS acknowledgment error: ${response.status}`);
+    }
+
+    return { success: true, message: 'Acknowledgment email sent successfully' };
+  } catch (error) {
+    console.error('EmailJS acknowledgment error:', error);
+    throw error;
+  }
 };
 
 // Contact form endpoint
@@ -169,27 +121,46 @@ app.post('/api/contact', async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    // Send notification email to support@agentic-ai.ltd
-    const notificationEmail = createNotificationEmail(formData);
-    await transporter.sendMail(notificationEmail);
+    console.log('📧 Processing contact form submission:', formData);
+
+    // Check if EmailJS is configured
+    if (!isEmailJSConfigured()) {
+      console.log('⚠️  EmailJS not configured - logging submission only');
+      return res.status(200).json({ 
+        message: 'Contact form submitted (EmailJS not configured)',
+        timestamp: formData.timestamp,
+        status: 'logged_only'
+      });
+    }
+
+    // Send notification email to AgenticAI team
+    try {
+      await sendEmailViaEmailJS(formData);
+      console.log('✅ Notification email sent to AgenticAI team');
+    } catch (emailError) {
+      console.error('❌ Failed to send notification email:', emailError);
+      // Continue to try acknowledgment email
+    }
 
     // Send acknowledgment email to user
-    const acknowledgmentEmail = createAcknowledgmentEmail(formData);
-    await transporter.sendMail(acknowledgmentEmail);
+    try {
+      await sendAcknowledgmentEmail(formData);
+      console.log('✅ Acknowledgment email sent to user');
+    } catch (ackError) {
+      console.error('❌ Failed to send acknowledgment email:', ackError);
+    }
 
     res.status(200).json({ 
-      message: 'Emails sent successfully',
-      timestamp: formData.timestamp 
+      message: 'Contact form submitted and emails sent successfully',
+      timestamp: formData.timestamp,
+      status: 'emails_sent'
     });
 
   } catch (error) {
-    console.error('Error sending emails:', error);
+    console.error('❌ Error processing contact form:', error);
     res.status(500).json({ 
-      error: 'Failed to send emails',
-      details: error.message,
-      code: error.code,
-      response: error.response,
-      responseCode: error.responseCode
+      error: 'Failed to process contact form',
+      details: error.message
     });
   }
 });
@@ -199,11 +170,30 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK',
     timestamp: new Date().toISOString(),
-    service: 'Contact API' 
+    service: 'Contact API with EmailJS',
+    environment: 'webcontainer'
   });
 });
 
 const PORT = process.env.PORT || 3001;
+
+// Check if EmailJS credentials are configured
+const isEmailJSConfigured = () => {
+  return EMAILJS_CONFIG.serviceId && 
+         EMAILJS_CONFIG.templateId && 
+         EMAILJS_CONFIG.userId && 
+         EMAILJS_CONFIG.accessToken;
+};
+
 app.listen(PORT, () => {
-  console.log(`Contact API server running on port ${PORT}`);
+  console.log(`🚀 Contact API server running on port ${PORT}`);
+  console.log(`📧 EmailJS integration enabled`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  
+  if (!isEmailJSConfigured()) {
+    console.log(`⚠️  WARNING: EmailJS not configured! Please set up your credentials in .env file`);
+    console.log(`   Required: EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_ACK_TEMPLATE_ID, EMAILJS_USER_ID, EMAILJS_ACCESS_TOKEN`);
+  } else {
+    console.log(`✅ EmailJS configured and ready to send emails`);
+  }
 });

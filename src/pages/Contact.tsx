@@ -33,20 +33,20 @@ const Contact = () => {
     {
       icon: Mail,
       title: "Email",
-      details: "support@agentic-ai.ltd",
+      details: "info@agentic-ai.ltd",
       description: "Get in touch for general inquiries"
     },
     {
       icon: Phone,
       title: "Phone",
-      details: "+44 7771970567",
+      details: "07771970567",
       description: "Speak with our team directly"
     },
     {
       icon: MapPin,
       title: "Office",
-      details: "25 Cavendish Square, London W1G 0PN, United Kingdom",
-      description: "Visit our London headquarters"
+      details: "Turnbridge Wells, Kent, United Kingdom",
+      description: "Visit our UK headquarters"
     },
     {
       icon: Clock,
@@ -99,6 +99,7 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
+      // Use relative path - proxy will handle routing
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
@@ -111,9 +112,12 @@ const Contact = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
       }
 
+      const result = await response.json();
+      
       // Success
       toast({
         title: "Message Sent Successfully!",
@@ -134,7 +138,7 @@ const Contact = () => {
       console.error('Error sending message:', error);
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again or contact us directly.",
+        description: error instanceof Error ? error.message : "Failed to send message. Please try again or contact us directly.",
         variant: "destructive",
       });
     } finally {
@@ -156,7 +160,7 @@ const Contact = () => {
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
               Ready to transform your business with intelligent AI agents? 
-              Our team is here to help you every step of the way.
+              Agentic AI AMRO Ltd is here to help you every step of the way.
             </p>
           </div>
         </div>
@@ -325,16 +329,17 @@ const Contact = () => {
               We understand that time is critical. Here's what to expect when you reach out.
             </p>
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {responseTypes.map((response, index) => (
-              <Card key={index} className="card-gradient border-border hover:glow-primary transition-all duration-300">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="w-6 h-6 text-primary-foreground" />
+            {responseTypes.map((type, index) => (
+              <Card key={index} className="card-gradient border-border text-center">
+                <CardContent className="p-6">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">{response.type}</h3>
-                  <p className="text-2xl font-bold text-primary mb-2">{response.time}</p>
-                  <p className="text-sm text-muted-foreground">{response.description}</p>
+                  <h3 className="text-lg font-semibold mb-2">{type.type}</h3>
+                  <div className="text-2xl font-bold text-primary mb-2">{type.time}</div>
+                  <p className="text-sm text-muted-foreground">{type.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -342,20 +347,24 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* Map Section */}
+      {/* CTA Section */}
       <section className="section-padding">
         <div className="container-width">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Visit Our Office</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Located in the heart of London's business district, our office is always open to visitors.
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-6">Ready to Get Started?</h2>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Join hundreds of companies already transforming their operations with our AI agents.
             </p>
-          </div>
-          <div className="w-full h-96 bg-muted/20 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <MapPin className="w-16 h-16 text-primary mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">25 Cavendish Square</h3>
-              <p className="text-muted-foreground">London W1G 0PN, United Kingdom</p>
+            <div className="card-gradient rounded-lg p-8 glow-primary">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button className="btn-primary text-lg px-8 py-3">
+                  Start Your Project
+                  <CheckCircle className="ml-2 w-5 h-5" />
+                </Button>
+                <Button className="btn-ghost text-lg px-8 py-3">
+                  Schedule Consultation
+                </Button>
+              </div>
             </div>
           </div>
         </div>
