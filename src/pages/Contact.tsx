@@ -99,8 +99,8 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
-      // Use relative path - proxy will handle routing
-      const response = await fetch('/api/contact', {
+      // Use relative path - will work on agentic-ai.ltd automatically
+      const response = await fetch('/api/contact.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
