@@ -1,77 +1,79 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { useNavigate } from "react-router-dom";
 import { 
   ArrowRight, 
-  Brain, 
-  Workflow, 
-  MessageSquare, 
-  Target, 
-  Zap, 
-  Shield, 
-  TrendingUp,
-  CheckCircle,
-  Play,
+  CheckCircle, 
+  Play, 
+  Building2, 
+  Heart, 
+  ShoppingCart, 
+  Settings, 
+  Scale, 
+  Users, 
   Star,
-  Users,
-  Clock,
+  Quote,
+  Zap,
+  Shield,
   BarChart3
 } from "lucide-react";
 
 const Home = () => {
-  const useCases = [
-    {
-      icon: Brain,
-      title: "Intelligent Document Processing",
-      description: "Automatically extract, analyze, and route documents with context-aware AI agents.",
-      metrics: "95% accuracy rate",
-      industry: "Finance"
-    },
-    {
-      icon: MessageSquare,
-      title: "Customer Service Automation",
-      description: "24/7 intelligent support that escalates complex issues to human agents.",
-      metrics: "60% reduction in response time",
-      industry: "Retail"
-    },
-    {
-      icon: Workflow,
-      title: "Supply Chain Optimization",
-      description: "Predict demand, optimize inventory, and automate procurement decisions.",
-      metrics: "30% cost reduction",
-      industry: "Manufacturing"
-    },
-    {
-      icon: Target,
-      title: "Fraud Detection & Prevention",
-      description: "Real-time transaction monitoring with adaptive risk assessment.",
-      metrics: "99.8% detection rate",
-      industry: "Banking"
-    }
-  ];
+  const navigate = useNavigate();
 
   const workflowSteps = [
     {
-      step: "Plan",
-      description: "AI agents analyze objectives and create execution strategies"
+      step: "Perceive",
+      description: "AI agents continuously monitor your business environment, gathering data and understanding context."
+    },
+    {
+      step: "Reason",
+      description: "Advanced reasoning capabilities analyze complex situations and determine optimal courses of action."
     },
     {
       step: "Act",
-      description: "Autonomous execution with real-time decision making"
+      description: "Autonomous execution of decisions with real-time adaptation and learning from outcomes."
+    }
+  ];
+
+  const useCases = [
+    {
+      title: "Automated Loan Processing",
+      industry: "Finance",
+      description: "AI agents process loan applications end-to-end, from document verification to approval decisions.",
+      metrics: "75% faster processing",
+      icon: Building2
     },
     {
-      step: "Learn",
-      description: "Continuous improvement through outcome analysis"
+      title: "Patient Care Coordination",
+      industry: "Healthcare", 
+      description: "Intelligent agents coordinate patient care across departments and optimize treatment workflows.",
+      metrics: "50% better coordination",
+      icon: Heart
+    },
+    {
+      title: "Dynamic Pricing Optimization",
+      industry: "Retail",
+      description: "AI agents continuously optimize pricing based on demand, competition, and market conditions.",
+      metrics: "30% revenue increase",
+      icon: ShoppingCart
+    },
+    {
+      title: "Predictive Maintenance",
+      industry: "Manufacturing",
+      description: "Autonomous agents monitor equipment health and predict failures before they occur.",
+      metrics: "90% uptime improvement",
+      icon: Settings
     }
   ];
 
   const testimonials = [
     {
       name: "Sarah Johnson",
-      role: "CTO, FinanceCore",
-      company: "Fortune 500 Financial Services",
-      quote: "AgenticAI transformed our document processing workflow, reducing manual work by 80% while improving accuracy.",
+      role: "CEO, TechCorp Solutions",
+      company: "Leading Software Company",
+      quote: "Agentic AI transformed our customer service operations. Our AI agents now handle 85% of inquiries autonomously with 95% satisfaction rates.",
       rating: 5
     },
     {
@@ -102,7 +104,7 @@ const Home = () => {
     },
     {
       traditional: "Manual oversight required",
-      agentic: "Autonomous operation",
+      agentic: "Autonomous operation", 
       advantage: "Reduces human intervention by 80%"
     },
     {
@@ -116,6 +118,26 @@ const Home = () => {
       advantage: "Handles volume spikes automatically"
     }
   ];
+
+  const handleGetStarted = () => {
+    navigate("/get-started");
+  };
+
+  const handleWatchDemo = () => {
+    navigate("/watch-demo");
+  };
+
+  const handleScheduleConsultation = () => {
+    navigate("/schedule-demo");
+  };
+
+  const handleViewUseCases = () => {
+    navigate("/use-cases");
+  };
+
+  const handleViewServices = () => {
+    navigate("/services");
+  };
 
   return (
     <div className="min-h-screen">
@@ -136,11 +158,17 @@ const Home = () => {
                 No manual oversight required—just results.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Button className="btn-primary text-lg px-8 py-3" onClick={() => window.location.href = '/get-started'}>
+                <Button 
+                  className="btn-primary text-lg px-8 py-3" 
+                  onClick={handleGetStarted}
+                >
                   Get Started Today
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
-                <Button className="btn-ghost text-lg px-8 py-3" onClick={() => window.location.href = '/watch-demo'}>
+                <Button 
+                  className="btn-ghost text-lg px-8 py-3" 
+                  onClick={handleWatchDemo}
+                >
                   <Play className="mr-2 w-5 h-5" />
                   Watch Demo
                 </Button>
@@ -196,11 +224,11 @@ const Home = () => {
               to achieve complex goals—transforming how businesses operate.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             {workflowSteps.map((step, index) => (
-              <div key={index} className="text-center">
+              <div key={index} className="text-center relative">
                 <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse-glow">
-                  <span className="text-2xl font-bold text-primary-foreground">{step.step}</span>
+                  <span className="text-2xl font-bold text-primary-foreground">{index + 1}</span>
                 </div>
                 <h3 className="text-2xl font-semibold mb-4">{step.step}</h3>
                 <p className="text-muted-foreground">{step.description}</p>
@@ -213,8 +241,45 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Use Cases */}
+      {/* Traditional vs Agentic Comparison */}
       <section className="section-padding">
+        <div className="container-width">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4">Traditional Automation vs <span className="text-gradient">Agentic AI</span></h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              See the dramatic difference between old-school automation and intelligent agentic systems.
+            </p>
+          </div>
+          <div className="space-y-6">
+            {comparisonPoints.map((point, index) => (
+              <Card key={index} className="card-gradient border-border hover:glow-primary transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                    <div className="text-center">
+                      <h4 className="font-medium text-muted-foreground mb-2">Traditional</h4>
+                      <p className="text-lg">{point.traditional}</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-2">
+                        <ArrowRight className="w-8 h-8 text-primary-foreground" />
+                      </div>
+                      <h4 className="font-medium text-primary mb-2">Agentic AI</h4>
+                      <p className="text-lg font-semibold">{point.agentic}</p>
+                    </div>
+                    <div className="text-center">
+                      <Badge className="mb-2 bg-primary text-primary-foreground">Advantage</Badge>
+                      <p className="text-sm text-muted-foreground">{point.advantage}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases */}
+      <section className="section-padding bg-muted/20">
         <div className="container-width">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Proven <span className="text-gradient">Use Cases</span></h2>
@@ -224,7 +289,7 @@ const Home = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {useCases.map((useCase, index) => (
-              <Card key={index} className="card-gradient border-border hover:glow-primary transition-all duration-300 group">
+              <Card key={index} className="card-gradient border-border hover:glow-primary transition-all duration-300 group cursor-pointer">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center group-hover:animate-pulse">
@@ -244,11 +309,20 @@ const Home = () => {
               </Card>
             ))}
           </div>
+          <div className="text-center mt-8">
+            <Button 
+              className="btn-ghost text-lg px-8 py-3"
+              onClick={handleViewUseCases}
+            >
+              View All Use Cases
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </section>
 
       {/* Client Logos */}
-      <section className="section-padding bg-muted/20">
+      <section className="section-padding">
         <div className="container-width">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-semibold mb-8">Trusted by Industry Leaders</h2>
@@ -266,7 +340,7 @@ const Home = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="section-padding">
+      <section className="section-padding bg-muted/20">
         <div className="container-width">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">What Our <span className="text-gradient">Clients Say</span></h2>
@@ -275,16 +349,22 @@ const Home = () => {
             {testimonials.map((testimonial, index) => (
               <Card key={index} className="card-gradient border-border hover:glow-primary transition-all duration-300">
                 <CardContent className="p-6">
-                  <div className="flex items-center space-x-1 mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 text-primary fill-current" />
+                  <div className="flex items-center mb-4">
+                    {Array.from({ length: testimonial.rating }).map((_, i) => (
+                      <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
                     ))}
                   </div>
+                  <Quote className="w-8 h-8 text-primary mb-4" />
                   <p className="text-muted-foreground mb-6 italic">"{testimonial.quote}"</p>
-                  <div>
-                    <h4 className="font-semibold">{testimonial.name}</h4>
-                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                    <p className="text-xs text-muted-foreground">{testimonial.company}</p>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                      <Users className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">{testimonial.name}</h4>
+                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                      <p className="text-xs text-muted-foreground">{testimonial.company}</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -293,68 +373,56 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Agentic vs Traditional AI */}
-      <section className="section-padding bg-muted/20">
-        <div className="container-width">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Why Choose <span className="text-gradient">Agentic AI</span>?</h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              See the clear advantages of agentic AI over traditional automation approaches.
-            </p>
-          </div>
-          <div className="card-gradient rounded-lg p-8 glow-primary">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold mb-4 text-muted-foreground">Traditional AI</h3>
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold mb-4 text-primary">Agentic AI</h3>
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold mb-4 text-primary">Advantage</h3>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {comparisonPoints.map((point, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-b border-border/30 last:border-b-0">
-                  <div className="text-center md:text-left">
-                    <span className="text-muted-foreground">{point.traditional}</span>
-                  </div>
-                  <div className="text-center md:text-left">
-                    <span className="text-primary font-semibold">{point.agentic}</span>
-                  </div>
-                  <div className="text-center md:text-left">
-                    <span className="text-foreground">{point.advantage}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter Section */}
+      {/* Final CTA */}
       <section className="section-padding">
         <div className="container-width">
-          <div className="card-gradient rounded-lg p-12 text-center glow-primary">
-            <h2 className="text-3xl font-bold mb-4">Stay Ahead of the AI Revolution</h2>
-            <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Get exclusive insights, case studies, and early access to new agentic AI capabilities.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-              <Input 
-                type="email" 
-                placeholder="Enter your email"
-                className="bg-background/50 border-border"
-              />
-              <Button className="btn-primary">
-                Subscribe Now
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-4">
-              Join 10,000+ AI leaders. No spam, unsubscribe anytime.
-            </p>
-          </div>
+          <Card className="card-gradient border-border glow-primary">
+            <CardContent className="p-12 text-center">
+              <h2 className="text-4xl font-bold mb-4">Ready to Transform Your Business?</h2>
+              <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+                Join hundreds of companies already using agentic AI to revolutionize their operations. 
+                Get started today and see results in just 48 hours.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="text-center">
+                  <Zap className="w-8 h-8 text-primary mx-auto mb-2" />
+                  <div className="font-semibold">Fast Implementation</div>
+                  <div className="text-sm text-muted-foreground">Deploy in 48 hours</div>
+                </div>
+                <div className="text-center">
+                  <Shield className="w-8 h-8 text-primary mx-auto mb-2" />
+                  <div className="font-semibold">Enterprise Security</div>
+                  <div className="text-sm text-muted-foreground">SOC 2 compliant</div>
+                </div>
+                <div className="text-center">
+                  <BarChart3 className="w-8 h-8 text-primary mx-auto mb-2" />
+                  <div className="font-semibold">Proven Results</div>
+                  <div className="text-sm text-muted-foreground">Average 45% cost reduction</div>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  className="btn-primary text-lg px-8 py-3"
+                  onClick={handleGetStarted}
+                >
+                  Start Your Transformation
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+                <Button 
+                  className="btn-ghost text-lg px-8 py-3"
+                  onClick={handleScheduleConsultation}
+                >
+                  Schedule Consultation
+                </Button>
+                <Button 
+                  className="btn-ghost text-lg px-8 py-3"
+                  onClick={handleViewServices}
+                >
+                  Explore Services
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
     </div>

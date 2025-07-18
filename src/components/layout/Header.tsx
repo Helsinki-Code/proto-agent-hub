@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   
   const navigation = [
     { name: "Home", href: "/" },
@@ -21,6 +22,10 @@ const Header = () => {
   ];
 
   const isActive = (href: string) => location.pathname === href;
+
+  const handleGetStarted = () => {
+    navigate("/get-started");
+  };
 
   return (
     <header className="fixed top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border">
@@ -52,7 +57,9 @@ const Header = () => {
 
           {/* CTA Button */}
           <div className="hidden lg:block">
-            <Button className="btn-primary">Get Started</Button>
+            <Button className="btn-primary" onClick={handleGetStarted}>
+              Get Started
+            </Button>
           </div>
 
           {/* Mobile menu button */}
@@ -81,7 +88,15 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
-              <Button className="btn-primary mt-4">Get Started</Button>
+              <Button 
+                className="btn-primary mt-4" 
+                onClick={() => {
+                  handleGetStarted();
+                  setIsMenuOpen(false);
+                }}
+              >
+                Get Started
+              </Button>
             </nav>
           </div>
         )}

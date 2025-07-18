@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import { 
   Building2, 
   Heart, 
@@ -19,6 +20,7 @@ import {
 
 const UseCases = () => {
   const [activeTab, setActiveTab] = useState("All");
+  const navigate = useNavigate();
 
   const industries = [
     { name: "All", icon: Settings },
@@ -43,15 +45,16 @@ const UseCases = () => {
       },
       features: [
         "Document verification",
-        "Risk assessment",
+        "Risk assessment", 
         "Fraud detection",
         "Regulatory compliance"
       ],
-      icon: Building2
+      icon: Building2,
+      route: "/use-cases/automated-loan-processing"
     },
     {
       title: "Patient Care Coordination",
-      industry: "Healthcare",
+      industry: "Healthcare", 
       description: "Intelligent agents coordinate patient care across departments, schedule appointments, and monitor treatment progress.",
       metrics: {
         efficiency: "50% faster coordination",
@@ -61,10 +64,11 @@ const UseCases = () => {
       features: [
         "Appointment scheduling",
         "Treatment monitoring",
-        "Care coordination",
+        "Care coordination", 
         "Emergency response"
       ],
-      icon: Heart
+      icon: Heart,
+      route: "/use-cases/patient-care-coordination"
     },
     {
       title: "Dynamic Pricing & Inventory",
@@ -72,7 +76,7 @@ const UseCases = () => {
       description: "AI agents continuously optimize pricing and inventory levels based on demand, competition, and market conditions.",
       metrics: {
         efficiency: "30% revenue increase",
-        accuracy: "85% demand forecast accuracy",
+        accuracy: "85% demand forecast accuracy", 
         cost: "25% inventory reduction"
       },
       features: [
@@ -81,7 +85,8 @@ const UseCases = () => {
         "Inventory management",
         "Competitor analysis"
       ],
-      icon: ShoppingCart
+      icon: ShoppingCart,
+      route: "/use-cases/dynamic-pricing"
     },
     {
       title: "Predictive Maintenance",
@@ -98,7 +103,8 @@ const UseCases = () => {
         "Maintenance scheduling",
         "Resource optimization"
       ],
-      icon: Settings
+      icon: Settings,
+      route: "/use-cases/predictive-maintenance"
     },
     {
       title: "Contract Analysis & Review",
@@ -115,7 +121,8 @@ const UseCases = () => {
         "Compliance checking",
         "Amendment suggestions"
       ],
-      icon: Scale
+      icon: Scale,
+      route: "/use-cases/contract-analysis"
     },
     {
       title: "Intelligent Talent Matching",
@@ -132,7 +139,8 @@ const UseCases = () => {
         "Interview scheduling",
         "Performance prediction"
       ],
-      icon: Users
+      icon: Users,
+      route: "/use-cases/talent-matching"
     },
     {
       title: "Personalized Learning Paths",
@@ -149,13 +157,31 @@ const UseCases = () => {
         "Content adaptation",
         "Performance analytics"
       ],
-      icon: GraduationCap
+      icon: GraduationCap,
+      route: "/use-cases/personalized-learning"
     }
   ];
 
   const filteredUseCases = activeTab === "All" 
     ? useCases 
     : useCases.filter(useCase => useCase.industry === activeTab);
+
+  const handleScheduleConsultation = () => {
+    navigate("/schedule-demo");
+  };
+
+  const handleViewAllCaseStudies = () => {
+    // For now, this could scroll to top of page or navigate to a comprehensive case studies page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleGetStarted = () => {
+    navigate("/get-started");
+  };
+
+  const handleCaseStudyNavigation = (route: string) => {
+    navigate(route);
+  };
 
   return (
     <div className="min-h-screen">
@@ -260,22 +286,14 @@ const UseCases = () => {
                   <div className="flex space-x-2">
                     <Button 
                       className="btn-primary flex-1 text-sm"
-                      onClick={() => {
-                        const useCaseRoutes = [
-                          '/use-cases/automated-loan-processing',
-                          '/use-cases/patient-care-coordination',
-                          '/use-cases/dynamic-pricing',
-                          '/use-cases/predictive-maintenance',
-                          '/use-cases/contract-analysis',
-                          '/use-cases/talent-matching',
-                          '/use-cases/personalized-learning'
-                        ];
-                        window.location.href = useCaseRoutes[index];
-                      }}
+                      onClick={() => handleCaseStudyNavigation(useCase.route)}
                     >
                       See Case Study
                     </Button>
-                    <Button className="btn-ghost flex-1 text-sm">
+                    <Button 
+                      className="btn-ghost flex-1 text-sm"
+                      onClick={handleGetStarted}
+                    >
                       Get Started
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
@@ -326,11 +344,17 @@ const UseCases = () => {
               Join the growing number of businesses using agentic AI to achieve unprecedented results.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="btn-primary text-lg px-8 py-3">
+              <Button 
+                className="btn-primary text-lg px-8 py-3"
+                onClick={handleScheduleConsultation}
+              >
                 Schedule Consultation
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-              <Button className="btn-ghost text-lg px-8 py-3">
+              <Button 
+                className="btn-ghost text-lg px-8 py-3"
+                onClick={handleViewAllCaseStudies}
+              >
                 View All Case Studies
               </Button>
             </div>

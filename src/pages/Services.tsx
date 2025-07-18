@@ -1,90 +1,100 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import { 
-  Workflow, 
-  MessageSquare, 
+  Settings, 
+  ArrowRight, 
+  Check, 
+  Bot, 
   Brain, 
-  Target, 
-  Cloud, 
+  Zap,
+  Cloud,
   GraduationCap,
-  ArrowRight,
-  Check
+  MessageSquare
 } from "lucide-react";
 
 const Services = () => {
+  const navigate = useNavigate();
+
   const services = [
     {
-      icon: Workflow,
-      title: "Agentic Workflow Automation",
-      description: "End-to-end pipeline creation that works autonomously to achieve your business objectives.",
+      icon: Settings,
+      title: "Workflow Automation",
+      description: "Transform your business processes with intelligent automation that learns, adapts, and scales.",
       features: [
-        "Custom workflow design",
-        "Multi-agent orchestration",
-        "Real-time decision making",
-        "Adaptive process optimization"
+        "Process discovery and mapping",
+        "Intelligent document processing",
+        "Multi-system integration",
+        "Real-time monitoring and optimization"
       ],
-      pricing: "Starting at $5,000/month"
+      pricing: "Starting at $5,000/month",
+      route: "/services/workflow-automation"
     },
     {
       icon: MessageSquare,
-      title: "Custom AI Chatbots",
-      description: "Industry-tuned conversational AI with intelligent back-end logic and contextual understanding.",
+      title: "AI Chatbots & Virtual Assistants", 
+      description: "Deploy intelligent conversational agents that provide 24/7 customer support and engagement.",
       features: [
-        "24/7 intelligent support",
-        "Context-aware responses",
-        "Multi-language support",
-        "Integration with existing systems"
+        "Natural language understanding",
+        "Multi-channel deployment",
+        "CRM integration",
+        "Performance analytics"
       ],
-      pricing: "Starting at $2,500/month"
+      pricing: "Starting at $2,000/month",
+      route: "/chatbots"
     },
     {
       icon: Brain,
-      title: "LLM & Foundation Model Integration",
-      description: "Plug-and-play integration with leading AI models including OpenAI, Claude, and Gemini.",
+      title: "LLM Integration",
+      description: "Seamlessly integrate large language models into your existing systems and workflows.",
       features: [
-        "Model selection optimization",
-        "API management",
+        "Multi-model support (GPT, Claude, Gemini)",
         "Cost optimization",
-        "Performance monitoring"
+        "Security and compliance",
+        "Custom fine-tuning"
       ],
-      pricing: "Starting at $3,000/month"
+      pricing: "Starting at $3,000/month",
+      route: "/services/llm-integration"
     },
     {
-      icon: Target,
-      title: "AI Strategy & Advisory",
-      description: "Comprehensive roadmaps and feasibility studies to guide your AI transformation journey.",
+      icon: Zap,
+      title: "AI Strategy Consulting",
+      description: "Develop a comprehensive AI strategy that aligns with your business objectives and growth plans.",
       features: [
         "AI readiness assessment",
-        "Implementation roadmap",
-        "ROI analysis",
-        "Change management"
+        "Strategic roadmap development",
+        "ROI analysis and business case",
+        "Change management support"
       ],
-      pricing: "Starting at $10,000/project"
+      pricing: "Starting at $10,000/project",
+      route: "/services/ai-strategy"
     },
     {
       icon: Cloud,
-      title: "Cloud AI Deployment",
-      description: "Scalable orchestration across Azure, AWS, and GCP with enterprise-grade security.",
+      title: "Cloud Deployment & Scaling",
+      description: "Deploy and scale your AI solutions with enterprise-grade cloud infrastructure.",
       features: [
         "Multi-cloud deployment",
         "Auto-scaling infrastructure",
-        "Security compliance",
-        "Performance optimization"
+        "Security and compliance",
+        "24/7 monitoring and support"
       ],
-      pricing: "Starting at $7,500/month"
+      pricing: "Starting at $7,500/month",
+      route: "/services/cloud-deployment"
     },
     {
       icon: GraduationCap,
-      title: "Training & Workshops",
-      description: "On-site or virtual upskilling programs to help your team master agentic AI technologies.",
+      title: "Training & Enablement",
+      description: "Upskill your team with comprehensive AI training programs and certifications.",
       features: [
         "Custom curriculum design",
         "Hands-on workshops",
         "Certification programs",
         "Ongoing support"
       ],
-      pricing: "Starting at $15,000/program"
+      pricing: "Starting at $15,000/program",
+      route: "/services/training"
     }
   ];
 
@@ -111,6 +121,22 @@ const Services = () => {
     }
   ];
 
+  const handleScheduleConsultation = () => {
+    navigate("/schedule-demo");
+  };
+
+  const handleStartJourney = () => {
+    navigate("/get-started");
+  };
+
+  const handleViewCaseStudies = () => {
+    navigate("/use-cases");
+  };
+
+  const handleServiceNavigation = (route: string) => {
+    navigate(route);
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -124,7 +150,10 @@ const Services = () => {
               From strategy to implementation, we provide end-to-end agentic AI services 
               that transform how your business operates.
             </p>
-            <Button className="btn-primary text-lg px-8 py-3">
+            <Button 
+              className="btn-primary text-lg px-8 py-3"
+              onClick={handleScheduleConsultation}
+            >
               Schedule Consultation
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
@@ -160,17 +189,10 @@ const Services = () => {
                     <Badge variant="outline" className="mb-4">
                       {service.pricing}
                     </Badge>
-                    <Button className="btn-ghost w-full" onClick={() => {
-                      const serviceRoutes = [
-                        '/services/workflow-automation',
-                        '/services/chatbots', 
-                        '/services/llm-integration',
-                        '/services/ai-strategy',
-                        '/services/cloud-deployment',
-                        '/services/training'
-                      ];
-                      window.location.href = serviceRoutes[index];
-                    }}>
+                    <Button 
+                      className="btn-ghost w-full" 
+                      onClick={() => handleServiceNavigation(service.route)}
+                    >
                       Learn More
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
@@ -215,11 +237,17 @@ const Services = () => {
               and drive unprecedented efficiency.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="btn-primary text-lg px-8 py-3">
+              <Button 
+                className="btn-primary text-lg px-8 py-3"
+                onClick={handleStartJourney}
+              >
                 Start Your Journey
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-              <Button className="btn-ghost text-lg px-8 py-3">
+              <Button 
+                className="btn-ghost text-lg px-8 py-3"
+                onClick={handleViewCaseStudies}
+              >
                 View Case Studies
               </Button>
             </div>

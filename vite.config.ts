@@ -4,7 +4,12 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Ensure JSX runtime is set correctly
+      jsxImportSource: undefined
+    })
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
