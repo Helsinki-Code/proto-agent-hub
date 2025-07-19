@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,46 +99,100 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
-      // Use relative path - will work on agentic-ai.ltd automatically
-      const response = await fetch('/api/contact.php', {
+      console.log('🚀 Sending emails via direct EmailJS...');
+      
+      // Use direct EmailJS API calls (bypasses all server restrictions)
+      const timestamp = new Date().toLocaleString('en-GB', {
+        timeZone: 'Europe/London',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+
+      // Send notification email to your team
+      console.log('📧 Sending notification email...');
+      const notificationResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
-          timestamp: new Date().toISOString()
-        }),
+          service_id: 'service_fmsw4wk',
+          template_id: 'template_4l2yayr',
+          user_id: 'VSRnVcprnkwHCsGwC',
+          accessToken: 'UlQHhzBa-JT5aZxLOnjrO',
+          template_params: {
+            to_name: 'AgenticAI Team',
+            from_name: `${formData.firstName} ${formData.lastName}`,
+            from_email: formData.email,
+            company: formData.company || 'Not specified',
+            subject: formData.subject || 'Contact Form Submission',
+            message: formData.message,
+            reply_to: formData.email,
+            to_email: 'info@agentic-ai.ltd',
+            timestamp: timestamp
+          }
+        })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send message');
+      // Send acknowledgment email to user
+      console.log('✅ Sending acknowledgment email...');
+      const ackResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          service_id: 'service_fmsw4wk',
+          template_id: 'template_x89ivqw',
+          user_id: 'VSRnVcprnkwHCsGwC',
+          accessToken: 'UlQHhzBa-JT5aZxLOnjrO',
+          template_params: {
+            to_name: formData.firstName,
+            to_email: formData.email,
+            from_name: 'AgenticAI Team',
+            from_email: 'info@agentic-ai.ltd',
+            company: formData.company || 'Not specified',
+            original_subject: formData.subject || 'General Inquiry',
+            timestamp: timestamp
+          }
+        })
+      });
+
+      console.log('📊 Notification response:', notificationResponse.status);
+      console.log('📊 Acknowledgment response:', ackResponse.status);
+
+      // Check if at least one email was sent successfully
+      if (notificationResponse.ok || ackResponse.ok) {
+        console.log('✅ Emails sent successfully!');
+        
+        // Success
+        toast({
+          title: "Message Sent Successfully!",
+          description: "Thank you for contacting us. We'll get back to you within 24 hours.",
+        });
+
+        // Reset form
+        setFormData({
+          firstName: "",
+          lastName: "",
+          email: "",
+          company: "",
+          subject: "",
+          message: ""
+        });
+      } else {
+        throw new Error(`EmailJS failed: Notification ${notificationResponse.status}, Acknowledgment ${ackResponse.status}`);
       }
 
-      const result = await response.json();
-      
-      // Success
-      toast({
-        title: "Message Sent Successfully!",
-        description: "Thank you for contacting us. We'll get back to you within 24 hours.",
-      });
-
-      // Reset form
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        company: "",
-        subject: "",
-        message: ""
-      });
-
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send message. Please try again or contact us directly.",
+        description: "Failed to send message. Please email us directly at info@agentic-ai.ltd",
         variant: "destructive",
       });
     } finally {
@@ -258,7 +312,7 @@ const Contact = () => {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                        Sending...
+                        Sending via EmailJS...
                       </>
                     ) : (
                       <>
