@@ -99,9 +99,8 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
-      console.log('🚀 Sending emails via direct EmailJS...');
+      console.log('🚀 Sending emails directly via EmailJS API...');
       
-      // Use direct EmailJS API calls (bypasses all server restrictions)
       const timestamp = new Date().toLocaleString('en-GB', {
         timeZone: 'Europe/London',
         day: '2-digit',
@@ -112,62 +111,75 @@ const Contact = () => {
         hour12: false
       });
 
-      // Send notification email to your team
-      console.log('📧 Sending notification email...');
+      // EmailJS credentials
+      const emailjsConfig = {
+        serviceId: 'service_fmsw4wk',
+        notificationTemplateId: 'template_4l2yayr',
+        acknowledgmentTemplateId: 'template_x89ivqw',
+        userId: 'VSRnVcprnkwHCsGwC',
+        accessToken: 'UlQHhzBa-JT5aZxLOnjrO'
+      };
+
+      // Send notification email to AgenticAI team
+      console.log('📧 Sending notification email to team...');
+      const notificationData = {
+        service_id: emailjsConfig.serviceId,
+        template_id: emailjsConfig.notificationTemplateId,
+        user_id: emailjsConfig.userId,
+        accessToken: emailjsConfig.accessToken,
+        template_params: {
+          to_name: 'AgenticAI Team',
+          from_name: `${formData.firstName} ${formData.lastName}`,
+          from_email: formData.email,
+          company: formData.company || 'Not specified',
+          subject: formData.subject || 'Contact Form Submission',
+          message: formData.message,
+          reply_to: formData.email,
+          to_email: 'info@agentic-ai.ltd',
+          timestamp: timestamp
+        }
+      };
+
       const notificationResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          service_id: 'service_fmsw4wk',
-          template_id: 'template_4l2yayr',
-          user_id: 'VSRnVcprnkwHCsGwC',
-          accessToken: 'UlQHhzBa-JT5aZxLOnjrO',
-          template_params: {
-            to_name: 'AgenticAI Team',
-            from_name: `${formData.firstName} ${formData.lastName}`,
-            from_email: formData.email,
-            company: formData.company || 'Not specified',
-            subject: formData.subject || 'Contact Form Submission',
-            message: formData.message,
-            reply_to: formData.email,
-            to_email: 'info@agentic-ai.ltd',
-            timestamp: timestamp
-          }
-        })
+        body: JSON.stringify(notificationData)
       });
 
       // Send acknowledgment email to user
-      console.log('✅ Sending acknowledgment email...');
+      console.log('✅ Sending acknowledgment email to user...');
+      const acknowledgmentData = {
+        service_id: emailjsConfig.serviceId,
+        template_id: emailjsConfig.acknowledgmentTemplateId,
+        user_id: emailjsConfig.userId,
+        accessToken: emailjsConfig.accessToken,
+        template_params: {
+          to_name: formData.firstName,
+          to_email: formData.email,
+          from_name: 'AgenticAI Team',
+          from_email: 'info@agentic-ai.ltd',
+          company: formData.company || 'Not specified',
+          original_subject: formData.subject || 'General Inquiry',
+          timestamp: timestamp
+        }
+      };
+
       const ackResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          service_id: 'service_fmsw4wk',
-          template_id: 'template_x89ivqw',
-          user_id: 'VSRnVcprnkwHCsGwC',
-          accessToken: 'UlQHhzBa-JT5aZxLOnjrO',
-          template_params: {
-            to_name: formData.firstName,
-            to_email: formData.email,
-            from_name: 'AgenticAI Team',
-            from_email: 'info@agentic-ai.ltd',
-            company: formData.company || 'Not specified',
-            original_subject: formData.subject || 'General Inquiry',
-            timestamp: timestamp
-          }
-        })
+        body: JSON.stringify(acknowledgmentData)
       });
 
-      console.log('📊 Notification response:', notificationResponse.status);
-      console.log('📊 Acknowledgment response:', ackResponse.status);
+      console.log('📊 Notification response status:', notificationResponse.status);
+      console.log('📊 Acknowledgment response status:', ackResponse.status);
 
       // Check if at least one email was sent successfully
       if (notificationResponse.ok || ackResponse.ok) {
-        console.log('✅ Emails sent successfully!');
+        console.log('✅ At least one email sent successfully!');
         
         // Success
         toast({
@@ -185,6 +197,9 @@ const Contact = () => {
           message: ""
         });
       } else {
+        const notificationText = await notificationResponse.text();
+        const ackText = await ackResponse.text();
+        console.error('EmailJS errors:', { notificationText, ackText });
         throw new Error(`EmailJS failed: Notification ${notificationResponse.status}, Acknowledgment ${ackResponse.status}`);
       }
 
