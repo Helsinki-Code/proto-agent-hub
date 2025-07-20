@@ -6,394 +6,323 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supabase, Resource, subscribeToTable } from '@/lib/supabase';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { 
-  Plus, 
-  Edit, 
-  Trash2, 
+  BookOpen, 
   Download, 
+  Edit, 
+  Save, 
+  Plus, 
   Search, 
+  Star,
+  Trash2,
+  Calendar,
+  TrendingUp,
   FileText,
-  Video,
-  Code,
-  Archive,
-  BookOpen,
+  Image,
+  File,
   ExternalLink,
   Upload,
-  Save,
-  X,
-  Star,
   Eye,
-  Calendar
+  Filter
 } from 'lucide-react';
-
-interface Resource {
-  id: string;
-  title: string;
-  description: string;
-  type: 'whitepaper' | 'guide' | 'tool' | 'video' | 'template' | 'research';
-  format: string;
-  fileSize?: string;
-  downloadUrl: string;
-  category: string;
-  tags: string[];
-  downloads: number;
-  rating: number;
-  featured: boolean;
-  createdDate: string;
-  updatedDate: string;
-  status: 'active' | 'draft' | 'archived';
-}
 
 const ResourcesManagement = () => {
   const { toast } = useToast();
+  const { user } = useAdminAuth();
   const [resources, setResources] = useState<Resource[]>([]);
-  const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  
+  const [newResource, setNewResource] = useState({
+    title: '',
+    description: '',
+    type: 'guide' as 'ebook' | 'whitepaper' | 'guide' | 'template' | 'case_study',
+    file_url: '',
+    file_size: 0,
+    file_type: '',
+    thumbnail_url: '',
+    category: '',
+    tags: [] as string[],
+    is_featured: false,
+    is_public: true,
+  });
 
-  // Sample resources data
+  const resourceTypes = [
+    { value: 'ebook', label: 'eBook', icon: BookOpen },
+    { value: 'whitepaper', label: 'Whitepaper', icon: FileText },
+    { value: 'guide', label: 'Guide', icon: BookOpen },
+    { value: 'template', label: 'Template', icon: File },
+    { value: 'case_study', label: 'Case Study', icon: TrendingUp },
+  ];
+
+  const categories = [
+    'Implementation',
+    'Strategy',
+    'Tools',
+    'Research',
+    'Training',
+    'Technical',
+    'Business',
+    'Marketing'
+  ];
+
+  // Load resources on mount
   useEffect(() => {
-    const sampleResources: Resource[] = [
-      {
-        id: '1',
-        title: 'The Complete Guide to Agentic AI',
-        description: 'Comprehensive 50-page guide covering everything from basic concepts to advanced implementation strategies.',
-        type: 'whitepaper',
-        format: 'PDF',
-        fileSize: '15.2 MB',
-        downloadUrl: '/resources/complete-guide-agentic-ai.pdf',
-        category: 'Implementation',
-        tags: ['AI', 'Guide', 'Implementation'],
-        downloads: 12500,
-        rating: 4.8,
-        featured: true,
-        createdDate: '2024-01-15',
-        updatedDate: '2024-01-15',
-        status: 'active'
-      },
-      {
-        id: '2',
-        title: 'ROI Calculator for AI Automation',
-        description: 'Interactive tool to calculate potential return on investment for AI automation projects.',
-        type: 'tool',
-        format: 'Web App',
-        downloadUrl: '/tools/roi-calculator',
-        category: 'Tools',
-        tags: ['ROI', 'Calculator', 'Business'],
-        downloads: 8200,
-        rating: 4.6,
-        featured: false,
-        createdDate: '2024-01-10',
-        updatedDate: '2024-01-12',
-        status: 'active'
-      },
-      {
-        id: '3',
-        title: 'Multi-Agent Systems Architecture',
-        description: 'Technical deep-dive into designing scalable multi-agent architectures for enterprise applications.',
-        type: 'guide',
-        format: 'PDF',
-        fileSize: '8.7 MB',
-        downloadUrl: '/resources/multi-agent-architecture.pdf',
-        category: 'Technical',
-        tags: ['Architecture', 'Multi-Agent', 'Enterprise'],
-        downloads: 5400,
-        rating: 4.9,
-        featured: false,
-        createdDate: '2024-01-08',
-        updatedDate: '2024-01-08',
-        status: 'active'
-      }
-    ];
-    setResources(sampleResources);
-    setFilteredResources(sampleResources);
+    loadResources();
+    
+    // Set up real-time subscription
+    const resourcesSubscription = subscribeToTable('resources', () => {
+      loadResources();
+    });
+
+    return () => {
+      resourcesSubscription.unsubscribe();
+    };
   }, []);
 
-  // Filter resources
-  useEffect(() => {
-    let filtered = resources;
+  const loadResources = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('resources')
+        .select(`
+          *,
+          author:admin_users(username, email)
+        `)
+        .order('created_at', { ascending: false });
 
-    if (searchTerm) {
-      filtered = filtered.filter(resource => 
-        resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        resource.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        resource.category.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      if (error) {
+        console.error('Error loading resources:', error);
+        toast({
+          title: "Error Loading Resources",
+          description: "Failed to load resources from database.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setResources(data || []);
+    } catch (error) {
+      console.error('Error loading resources:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    if (filterType !== 'all') {
-      filtered = filtered.filter(resource => resource.type === filterType);
-    }
-
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter(resource => resource.category === filterCategory);
-    }
-
-    setFilteredResources(filtered);
-  }, [resources, searchTerm, filterType, filterCategory]);
-
-  const resourceTypes = ['whitepaper', 'guide', 'tool', 'video', 'template', 'research'];
-  const categories = ['Implementation', 'Technical', 'Tools', 'Business', 'Research'];
-
-  const handleCreateNew = () => {
-    const newResource: Resource = {
-      id: Date.now().toString(),
-      title: '',
-      description: '',
-      type: 'guide',
-      format: 'PDF',
-      downloadUrl: '',
-      category: 'Implementation',
-      tags: [],
-      downloads: 0,
-      rating: 0,
-      featured: false,
-      createdDate: new Date().toISOString().split('T')[0],
-      updatedDate: new Date().toISOString().split('T')[0],
-      status: 'draft'
-    };
-    setEditingResource(newResource);
-    setIsEditing(true);
   };
 
-  const handleEdit = (resource: Resource) => {
-    setEditingResource({ ...resource });
-    setIsEditing(true);
-  };
-
-  const handleSave = () => {
-    if (!editingResource) return;
-
-    if (!editingResource.title || !editingResource.description) {
+  const handleCreateResource = async () => {
+    if (!newResource.title || !newResource.description) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in title and description before saving.",
+        title: "Missing Required Fields",
+        description: "Please fill in title and description.",
         variant: "destructive",
       });
       return;
     }
 
-    if (resources.find(r => r.id === editingResource.id)) {
-      setResources(resources.map(r => r.id === editingResource.id ? editingResource : r));
+    try {
+      const { data, error } = await supabase
+        .from('resources')
+        .insert({
+          ...newResource,
+          author_id: user?.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating resource:', error);
+        toast({
+          title: "Error Creating Resource",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
-        title: "Resource Updated! ✨",
-        description: `"${editingResource.title}" has been saved successfully.`,
+        title: "Resource Created! 🎉",
+        description: `"${newResource.title}" has been added to your resource library.`,
       });
-    } else {
-      setResources([editingResource, ...resources]);
+
+      // Reset form
+      setNewResource({
+        title: '',
+        description: '',
+        type: 'guide',
+        file_url: '',
+        file_size: 0,
+        file_type: '',
+        thumbnail_url: '',
+        category: '',
+        tags: [],
+        is_featured: false,
+        is_public: true,
+      });
+
+      setIsEditing(false);
+      loadResources();
+    } catch (error) {
+      console.error('Error creating resource:', error);
       toast({
-        title: "New Resource Created! 🎉",
-        description: `"${editingResource.title}" has been added to your library.`,
+        title: "Error",
+        description: "Failed to create resource. Please try again.",
+        variant: "destructive",
       });
     }
-
-    setIsEditing(false);
-    setEditingResource(null);
   };
 
-  const handleDelete = (id: string) => {
-    const resource = resources.find(r => r.id === id);
-    setResources(resources.filter(r => r.id !== id));
-    toast({
-      title: "Resource Deleted",
-      description: `"${resource?.title}" has been removed from your library.`,
-      variant: "destructive",
-    });
+  const handleUpdateResource = async (resourceId: string, updates: Partial<Resource>) => {
+    try {
+      const { error } = await supabase
+        .from('resources')
+        .update(updates)
+        .eq('id', resourceId);
+
+      if (error) {
+        console.error('Error updating resource:', error);
+        toast({
+          title: "Error Updating Resource",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Resource Updated! ✅",
+        description: "Changes have been saved successfully.",
+      });
+
+      loadResources();
+      setSelectedResource(null);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating resource:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update resource. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleDeleteResource = async (resourceId: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('resources')
+        .delete()
+        .eq('id', resourceId);
+
+      if (error) {
+        console.error('Error deleting resource:', error);
+        toast({
+          title: "Error Deleting Resource",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Resource Deleted",
+        description: `"${title}" has been permanently deleted.`,
+      });
+
+      loadResources();
+    } catch (error) {
+      console.error('Error deleting resource:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete resource. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleFeatured = async (resourceId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('resources')
+        .update({ is_featured: !currentStatus })
+        .eq('id', resourceId);
+
+      if (error) {
+        console.error('Error updating featured status:', error);
+        return;
+      }
+
+      toast({
+        title: !currentStatus ? "Resource Featured! ⭐" : "Removed from Featured",
+        description: !currentStatus 
+          ? "This resource will now appear in featured sections."
+          : "This resource has been removed from featured sections.",
+      });
+
+      loadResources();
+    } catch (error) {
+      console.error('Error toggling featured status:', error);
+    }
+  };
+
+  const filteredResources = resources.filter(resource => {
+    const matchesSearch = resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         resource.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         resource.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesType = filterType === 'all' || resource.type === filterType;
+    const matchesCategory = filterCategory === 'all' || resource.category === filterCategory;
+    
+    return matchesSearch && matchesType && matchesCategory;
+  });
 
   const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'whitepaper': return FileText;
-      case 'guide': return BookOpen;
-      case 'tool': return Code;
-      case 'video': return Video;
-      case 'template': return Archive;
-      case 'research': return Search;
-      default: return FileText;
-    }
+    const typeData = resourceTypes.find(t => t.value === type);
+    return typeData ? typeData.icon : File;
   };
 
   const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'whitepaper': return 'bg-blue-100 text-blue-700';
-      case 'guide': return 'bg-green-100 text-green-700';
-      case 'tool': return 'bg-purple-100 text-purple-700';
-      case 'video': return 'bg-red-100 text-red-700';
-      case 'template': return 'bg-orange-100 text-orange-700';
-      case 'research': return 'bg-indigo-100 text-indigo-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+    const colors = {
+      'ebook': 'bg-blue-100 text-blue-700',
+      'whitepaper': 'bg-purple-100 text-purple-700',
+      'guide': 'bg-green-100 text-green-700',
+      'template': 'bg-orange-100 text-orange-700',
+      'case_study': 'bg-red-100 text-red-700',
+    };
+    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-700';
   };
 
-  const totalDownloads = resources.reduce((sum, resource) => sum + resource.downloads, 0);
-  const activeCount = resources.filter(r => r.status === 'active').length;
-  const featuredCount = resources.filter(r => r.featured).length;
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return 'Unknown size';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
-  if (isEditing && editingResource) {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">
-              {resources.find(r => r.id === editingResource.id) ? 'Edit Resource' : 'Create New Resource'}
-            </h2>
-            <p className="text-muted-foreground">
-              {resources.find(r => r.id === editingResource.id) ? 'Update your resource details' : 'Add a new resource to your library'}
-            </p>
-          </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>
-              <Save className="w-4 h-4 mr-2" />
-              Save Resource
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Resource Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={editingResource.title}
-                    onChange={(e) => setEditingResource({ ...editingResource, title: e.target.value })}
-                    placeholder="Enter resource title..."
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={editingResource.description}
-                    onChange={(e) => setEditingResource({ ...editingResource, description: e.target.value })}
-                    placeholder="Describe what this resource provides..."
-                    rows={4}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="downloadUrl">Download URL</Label>
-                  <Input
-                    id="downloadUrl"
-                    value={editingResource.downloadUrl}
-                    onChange={(e) => setEditingResource({ ...editingResource, downloadUrl: e.target.value })}
-                    placeholder="/resources/filename.pdf"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="format">Format</Label>
-                    <Input
-                      id="format"
-                      value={editingResource.format}
-                      onChange={(e) => setEditingResource({ ...editingResource, format: e.target.value })}
-                      placeholder="PDF, Video, Web App"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="fileSize">File Size</Label>
-                    <Input
-                      id="fileSize"
-                      value={editingResource.fileSize || ''}
-                      onChange={(e) => setEditingResource({ ...editingResource, fileSize: e.target.value })}
-                      placeholder="15.2 MB (optional)"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Resource Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="type">Type</Label>
-                  <select
-                    id="type"
-                    value={editingResource.type}
-                    onChange={(e) => setEditingResource({ ...editingResource, type: e.target.value as any })}
-                    className="w-full p-2 border border-input rounded-md bg-background"
-                  >
-                    {resourceTypes.map(type => (
-                      <option key={type} value={type}>
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <select
-                    id="category"
-                    value={editingResource.category}
-                    onChange={(e) => setEditingResource({ ...editingResource, category: e.target.value })}
-                    className="w-full p-2 border border-input rounded-md bg-background"
-                  >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="tags">Tags (comma-separated)</Label>
-                  <Input
-                    id="tags"
-                    value={editingResource.tags.join(', ')}
-                    onChange={(e) => setEditingResource({ 
-                      ...editingResource, 
-                      tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)
-                    })}
-                    placeholder="AI, Guide, Technical"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <select
-                    id="status"
-                    value={editingResource.status}
-                    onChange={(e) => setEditingResource({ ...editingResource, status: e.target.value as any })}
-                    className="w-full p-2 border border-input rounded-md bg-background"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="active">Active</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="featured"
-                    checked={editingResource.featured}
-                    onChange={(e) => setEditingResource({ ...editingResource, featured: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label htmlFor="featured">Featured Resource</Label>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading resources management...</p>
         </div>
       </div>
     );
@@ -401,63 +330,84 @@ const ResourcesManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Resources Library</h2>
-          <p className="text-muted-foreground">Manage downloadable resources, guides, and tools</p>
+          <h1 className="text-3xl font-bold">Resources Management</h1>
+          <p className="text-muted-foreground">Manage downloadable resources and lead magnets</p>
         </div>
-        <Button onClick={handleCreateNew}>
+        <Button onClick={() => setIsEditing(true)} className="bg-primary hover:bg-primary/90">
           <Plus className="w-4 h-4 mr-2" />
           Add Resource
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Resources</p>
-                <p className="text-xl font-bold">{resources.length}</p>
+                <p className="text-2xl font-bold">{resources.length}</p>
               </div>
+              <BookOpen className="w-8 h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Download className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Downloads</p>
-                <p className="text-xl font-bold">{totalDownloads.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Eye className="w-5 h-5 text-purple-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-xl font-bold">{activeCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Star className="w-5 h-5 text-yellow-600" />
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Featured</p>
-                <p className="text-xl font-bold">{featuredCount}</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {resources.filter(r => r.is_featured).length}
+                </p>
               </div>
+              <Star className="w-8 h-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Public</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {resources.filter(r => r.is_public).length}
+                </p>
+              </div>
+              <Eye className="w-8 h-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Downloads</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {resources.reduce((sum, resource) => sum + resource.download_count, 0)}
+                </p>
+              </div>
+              <Download className="w-8 h-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Categories</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {new Set(resources.map(r => r.category).filter(Boolean)).size}
+                </p>
+              </div>
+              <Filter className="w-8 h-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
@@ -469,145 +419,410 @@ const ResourcesManagement = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search resources..."
+                  placeholder="Search resources by title, description, or tags..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background"
-            >
-              <option value="all">All Types</option>
-              {resourceTypes.map(type => (
-                <option key={type} value={type}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background"
-            >
-              <option value="all">All Categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
+            
+            <div className="flex gap-2">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-3 py-2 border border-border rounded-md bg-background"
+              >
+                <option value="all">All Types</option>
+                {resourceTypes.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+              
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="px-3 py-2 border border-border rounded-md bg-background"
+              >
+                <option value="all">All Categories</option>
+                {categories.map(category => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Resources Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredResources.map((resource) => {
-          const TypeIcon = getTypeIcon(resource.type);
-          return (
-            <Card key={resource.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${getTypeColor(resource.type)}`}>
-                      <TypeIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <Badge className={getTypeColor(resource.type)}>
-                        {resource.type}
-                      </Badge>
-                      {resource.featured && (
-                        <Badge className="ml-2 bg-yellow-100 text-yellow-700">
-                          <Star className="w-3 h-3 mr-1" />
-                          Featured
-                        </Badge>
+      <div className="grid gap-4">
+        {filteredResources.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No resources found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm || filterType !== 'all' || filterCategory !== 'all'
+                  ? 'Try adjusting your filters or search terms.'
+                  : 'Get started by adding your first resource.'
+                }
+              </p>
+              {!searchTerm && filterType === 'all' && filterCategory === 'all' && (
+                <Button onClick={() => setIsEditing(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add First Resource
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredResources.map((resource) => {
+            const TypeIcon = getTypeIcon(resource.type);
+            return (
+              <Card key={resource.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <TypeIcon className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold">{resource.title}</h3>
+                            {resource.is_featured && (
+                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                            )}
+                            {!resource.is_public && (
+                              <Badge variant="secondary">Private</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={getTypeColor(resource.type)}>
+                              {resourceTypes.find(t => t.value === resource.type)?.label || resource.type}
+                            </Badge>
+                            {resource.category && (
+                              <Badge variant="outline">{resource.category}</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {resource.description}
+                      </p>
+                      
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(resource.created_at)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Download className="w-3 h-3" />
+                          {resource.download_count} downloads
+                        </span>
+                        {resource.file_size > 0 && (
+                          <span className="flex items-center gap-1">
+                            <File className="w-3 h-3" />
+                            {formatFileSize(resource.file_size)}
+                          </span>
+                        )}
+                        {resource.author && (
+                          <span>By {resource.author.username}</span>
+                        )}
+                      </div>
+                      
+                      {resource.tags && resource.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {resource.tags.slice(0, 3).map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {resource.tags.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{resource.tags.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                  <div className="flex space-x-1">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(resource)}>
-                      <Edit className="w-3 h-3" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleDelete(resource.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                <h3 className="font-semibold mb-2">{resource.title}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{resource.description}</p>
-
-                <div className="space-y-2 text-xs text-muted-foreground">
-                  <div className="flex justify-between">
-                    <span>Format:</span>
-                    <span>{resource.format}</span>
-                  </div>
-                  {resource.fileSize && (
-                    <div className="flex justify-between">
-                      <span>Size:</span>
-                      <span>{resource.fileSize}</span>
+                    
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleToggleFeatured(resource.id, resource.is_featured)}
+                        className={resource.is_featured ? "text-yellow-600" : ""}
+                      >
+                        <Star className={`w-4 h-4 ${resource.is_featured ? 'fill-current' : ''}`} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedResource(resource);
+                          setIsEditing(true);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      {resource.file_url && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(resource.file_url, '_blank')}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteResource(resource.id, resource.title)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span>Downloads:</span>
-                    <span>{resource.downloads.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Rating:</span>
-                    <span>{resource.rating}/5.0</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-1 mt-4">
-                  {resource.tags.map((tag, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Updated: {resource.updatedDate}</span>
-                    <Badge variant={resource.status === 'active' ? 'default' : 'secondary'}>
-                      {resource.status}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
 
-      {filteredResources.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No resources found</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchTerm || filterType !== 'all' || filterCategory !== 'all' 
-                ? 'Try adjusting your search or filters' 
-                : 'Create your first resource to get started'
-              }
-            </p>
-            {(!searchTerm && filterType === 'all' && filterCategory === 'all') && (
-              <Button onClick={handleCreateNew}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create First Resource
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+      {/* Create/Edit Resource Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle>
+                {selectedResource ? 'Edit Resource' : 'Add New Resource'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="title">Title *</Label>
+                  <Input
+                    id="title"
+                    value={selectedResource ? selectedResource.title : newResource.title}
+                    onChange={(e) => {
+                      const title = e.target.value;
+                      if (selectedResource) {
+                        setSelectedResource({ ...selectedResource, title });
+                      } else {
+                        setNewResource({ ...newResource, title });
+                      }
+                    }}
+                    placeholder="Enter resource title"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="type">Type</Label>
+                  <select
+                    id="type"
+                    value={selectedResource ? selectedResource.type : newResource.type}
+                    onChange={(e) => {
+                      const type = e.target.value as typeof newResource.type;
+                      if (selectedResource) {
+                        setSelectedResource({ ...selectedResource, type });
+                      } else {
+                        setNewResource({ ...newResource, type });
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                  >
+                    {resourceTypes.map(type => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  value={selectedResource ? selectedResource.description || '' : newResource.description}
+                  onChange={(e) => {
+                    const description = e.target.value;
+                    if (selectedResource) {
+                      setSelectedResource({ ...selectedResource, description });
+                    } else {
+                      setNewResource({ ...newResource, description });
+                    }
+                  }}
+                  placeholder="Describe what this resource contains and its benefits"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="file_url">File URL</Label>
+                  <Input
+                    id="file_url"
+                    value={selectedResource ? selectedResource.file_url || '' : newResource.file_url}
+                    onChange={(e) => {
+                      const file_url = e.target.value;
+                      if (selectedResource) {
+                        setSelectedResource({ ...selectedResource, file_url });
+                      } else {
+                        setNewResource({ ...newResource, file_url });
+                      }
+                    }}
+                    placeholder="https://example.com/file.pdf"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="thumbnail_url">Thumbnail URL</Label>
+                  <Input
+                    id="thumbnail_url"
+                    value={selectedResource ? selectedResource.thumbnail_url || '' : newResource.thumbnail_url}
+                    onChange={(e) => {
+                      const thumbnail_url = e.target.value;
+                      if (selectedResource) {
+                        setSelectedResource({ ...selectedResource, thumbnail_url });
+                      } else {
+                        setNewResource({ ...newResource, thumbnail_url });
+                      }
+                    }}
+                    placeholder="https://example.com/thumbnail.jpg"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <select
+                    id="category"
+                    value={selectedResource ? selectedResource.category || '' : newResource.category}
+                    onChange={(e) => {
+                      const category = e.target.value;
+                      if (selectedResource) {
+                        setSelectedResource({ ...selectedResource, category });
+                      } else {
+                        setNewResource({ ...newResource, category });
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(category => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="tags">Tags (comma separated)</Label>
+                  <Input
+                    id="tags"
+                    value={selectedResource ? selectedResource.tags?.join(', ') || '' : newResource.tags.join(', ')}
+                    onChange={(e) => {
+                      const tags = e.target.value.split(',').map(tag => tag.trim()).filter(Boolean);
+                      if (selectedResource) {
+                        setSelectedResource({ ...selectedResource, tags });
+                      } else {
+                        setNewResource({ ...newResource, tags });
+                      }
+                    }}
+                    placeholder="ai, automation, guide"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedResource ? selectedResource.is_featured : newResource.is_featured}
+                    onChange={(e) => {
+                      const is_featured = e.target.checked;
+                      if (selectedResource) {
+                        setSelectedResource({ ...selectedResource, is_featured });
+                      } else {
+                        setNewResource({ ...newResource, is_featured });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Featured Resource</span>
+                </label>
+                
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedResource ? selectedResource.is_public : newResource.is_public}
+                    onChange={(e) => {
+                      const is_public = e.target.checked;
+                      if (selectedResource) {
+                        setSelectedResource({ ...selectedResource, is_public });
+                      } else {
+                        setNewResource({ ...newResource, is_public });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Public Resource</span>
+                </label>
+              </div>
+              
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setSelectedResource(null);
+                    setNewResource({
+                      title: '',
+                      description: '',
+                      type: 'guide',
+                      file_url: '',
+                      file_size: 0,
+                      file_type: '',
+                      thumbnail_url: '',
+                      category: '',
+                      tags: [],
+                      is_featured: false,
+                      is_public: true,
+                    });
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (selectedResource) {
+                      handleUpdateResource(selectedResource.id, selectedResource);
+                    } else {
+                      handleCreateResource();
+                    }
+                  }}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {selectedResource ? 'Update Resource' : 'Create Resource'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

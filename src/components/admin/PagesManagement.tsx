@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supabase, PageContent, subscribeToTable } from '@/lib/supabase';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { 
   Globe, 
   Edit, 
@@ -25,666 +27,851 @@ import {
   Clock,
   Smartphone,
   Monitor,
-  Tablet
+  Tablet,
+  ExternalLink,
+  Code,
+  Palette,
+  Zap,
+  Shield,
+  BarChart3,
+  Plus,
+  Trash2,
+  Copy
 } from 'lucide-react';
 
 interface PageSection {
   id: string;
   name: string;
-  type: 'text' | 'textarea' | 'image' | 'link' | 'list';
-  value: string | string[];
+  type: 'text' | 'textarea' | 'html' | 'image' | 'link' | 'list' | 'json';
+  value: string | string[] | object;
   label: string;
   placeholder?: string;
   maxLength?: number;
   required?: boolean;
+  description?: string;
 }
 
-interface Page {
+interface PageData {
   id: string;
-  name: string;
-  slug: string;
-  title: string;
-  metaDescription: string;
-  lastModified: string;
-  status: 'live' | 'draft' | 'needs-review';
-  views: number;
-  sections: PageSection[];
-  seoScore: number;
-  mobileOptimized: boolean;
-  loadTime: number;
+  page_name: string;
+  page_slug: string;
+  content: {
+    sections: PageSection[];
+    meta: {
+      title: string;
+      description: string;
+      keywords: string[];
+      og_image?: string;
+      canonical_url?: string;
+    };
+    settings: {
+      is_published: boolean;
+      last_modified: string;
+      template?: string;
+      custom_css?: string;
+      custom_js?: string;
+    };
+  };
+  meta_title?: string;
+  meta_description?: string;
+  seo_keywords?: string[];
+  is_published: boolean;
+  last_modified_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 const PagesManagement = () => {
   const { toast } = useToast();
-  const [pages, setPages] = useState<Page[]>([]);
-  const [selectedPage, setSelectedPage] = useState<Page | null>(null);
+  const { user } = useAdminAuth();
+  const [pages, setPages] = useState<PageData[]>([]);
+  const [selectedPage, setSelectedPage] = useState<PageData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'content' | 'seo' | 'settings'>('content');
 
-  // Initialize with sample pages
+  // Pre-defined page templates that most businesses need
+  const pageTemplates = [
+    {
+      name: 'Homepage',
+      slug: 'home',
+      template: 'homepage',
+      sections: [
+        { id: 'hero-title', name: 'hero-title', type: 'text', value: '', label: 'Hero Title', required: true },
+        { id: 'hero-subtitle', name: 'hero-subtitle', type: 'textarea', value: '', label: 'Hero Subtitle' },
+        { id: 'hero-cta', name: 'hero-cta', type: 'text', value: '', label: 'CTA Button Text' },
+        { id: 'features', name: 'features', type: 'json', value: [], label: 'Key Features' },
+        { id: 'testimonials', name: 'testimonials', type: 'json', value: [], label: 'Customer Testimonials' }
+      ]
+    },
+    {
+      name: 'About Us',
+      slug: 'about',
+      template: 'standard',
+      sections: [
+        { id: 'company-story', name: 'company-story', type: 'textarea', value: '', label: 'Company Story' },
+        { id: 'mission', name: 'mission', type: 'textarea', value: '', label: 'Mission Statement' },
+        { id: 'team-section', name: 'team-section', type: 'json', value: [], label: 'Team Members' },
+        { id: 'values', name: 'values', type: 'list', value: [], label: 'Company Values' }
+      ]
+    },
+    {
+      name: 'Contact',
+      slug: 'contact',
+      template: 'contact',
+      sections: [
+        { id: 'contact-intro', name: 'contact-intro', type: 'textarea', value: '', label: 'Contact Introduction' },
+        { id: 'office-address', name: 'office-address', type: 'textarea', value: '', label: 'Office Address' },
+        { id: 'phone', name: 'phone', type: 'text', value: '', label: 'Phone Number' },
+        { id: 'email', name: 'email', type: 'text', value: '', label: 'Email Address' },
+        { id: 'hours', name: 'hours', type: 'textarea', value: '', label: 'Business Hours' }
+      ]
+    }
+  ];
+
   useEffect(() => {
-    const samplePages: Page[] = [
-      {
-        id: '1',
-        name: 'Homepage',
-        slug: '/',
-        title: 'AgenticAI - Transform Your Business with Intelligent Automation',
-        metaDescription: 'Deploy intelligent AI agents that work autonomously to achieve your business goals. Enterprise-grade automation solutions.',
-        lastModified: '2024-01-15T10:30:00Z',
-        status: 'live',
-        views: 15420,
-        seoScore: 92,
-        mobileOptimized: true,
-        loadTime: 1.2,
-        sections: [
-          {
-            id: 'hero-title',
-            name: 'hero-title',
-            type: 'text',
-            value: 'Transform Your Business with Agentic AI',
-            label: 'Hero Title',
-            placeholder: 'Enter compelling headline',
-            maxLength: 100,
-            required: true
-          },
-          {
-            id: 'hero-subtitle',
-            name: 'hero-subtitle',
-            type: 'textarea',
-            value: 'Deploy intelligent AI agents that work autonomously to achieve your business goals. No manual oversight required—just results.',
-            label: 'Hero Subtitle',
-            placeholder: 'Supporting text that explains your value proposition',
-            maxLength: 300
-          },
-          {
-            id: 'hero-cta-primary',
-            name: 'hero-cta-primary',
-            type: 'text',
-            value: 'Get Started Today',
-            label: 'Primary CTA Button Text',
-            maxLength: 30
-          },
-          {
-            id: 'hero-cta-secondary',
-            name: 'hero-cta-secondary',
-            type: 'text',
-            value: 'Watch Demo',
-            label: 'Secondary CTA Button Text',
-            maxLength: 30
-          },
-          {
-            id: 'trust-indicators',
-            name: 'trust-indicators',
-            type: 'list',
-            value: ['Deploy in 48 hours', 'Enterprise-grade security', '24/7 support'],
-            label: 'Trust Indicators',
-            placeholder: 'Add trust building elements'
-          }
-        ]
-      },
-      {
-        id: '2',
-        name: 'About Us',
-        slug: '/about',
-        title: 'About AgenticAI - Leading AI Automation Experts',
-        metaDescription: 'Learn about our mission to democratize AI automation and help businesses achieve unprecedented efficiency with intelligent agents.',
-        lastModified: '2024-01-12T14:22:00Z',
-        status: 'live',
-        views: 3240,
-        seoScore: 88,
-        mobileOptimized: true,
-        loadTime: 0.9,
-        sections: [
-          {
-            id: 'about-intro',
-            name: 'about-intro',
-            type: 'textarea',
-            value: 'We are pioneers in agentic AI technology, helping businesses transform their operations through intelligent automation that thinks, learns, and acts autonomously.',
-            label: 'Introduction Paragraph',
-            maxLength: 500
-          },
-          {
-            id: 'mission-statement',
-            name: 'mission-statement',
-            type: 'textarea',
-            value: 'Our mission is to democratize AI automation and help businesses of all sizes achieve unprecedented efficiency through intelligent agent technology.',
-            label: 'Mission Statement',
-            maxLength: 300
-          },
-          {
-            id: 'team-size',
-            name: 'team-size',
-            type: 'text',
-            value: '50+ AI specialists',
-            label: 'Team Size',
-            maxLength: 50
-          }
-        ]
-      },
-      {
-        id: '3',
-        name: 'Services Overview',
-        slug: '/services',
-        title: 'AI Automation Services - Enterprise Solutions',
-        metaDescription: 'Comprehensive AI automation services including workflow automation, chatbots, LLM integration, and cloud deployment solutions.',
-        lastModified: '2024-01-10T09:15:00Z',
-        status: 'needs-review',
-        views: 8930,
-        seoScore: 85,
-        mobileOptimized: false,
-        loadTime: 1.8,
-        sections: [
-          {
-            id: 'services-intro',
-            name: 'services-intro',
-            type: 'textarea',
-            value: 'From strategy to implementation, we provide end-to-end agentic AI services that transform how your business operates.',
-            label: 'Services Introduction',
-            maxLength: 300
-          },
-          {
-            id: 'consultation-cta',
-            name: 'consultation-cta',
-            type: 'text',
-            value: 'Schedule Consultation',
-            label: 'Consultation CTA Text',
-            maxLength: 30
-          }
-        ]
-      },
-      {
-        id: '4',
-        name: 'Contact Us',
-        slug: '/contact',
-        title: 'Contact AgenticAI - Get Started Today',
-        metaDescription: 'Ready to transform your business with AI automation? Contact our experts for a personalized consultation and implementation strategy.',
-        lastModified: '2024-01-08T16:45:00Z',
-        status: 'draft',
-        views: 1240,
-        seoScore: 76,
-        mobileOptimized: true,
-        loadTime: 1.1,
-        sections: [
-          {
-            id: 'contact-heading',
-            name: 'contact-heading',
-            type: 'text',
-            value: 'Ready to Get Started?',
-            label: 'Contact Page Heading',
-            maxLength: 80
-          },
-          {
-            id: 'contact-description',
-            name: 'contact-description',
-            type: 'textarea',
-            value: 'Join hundreds of companies already transforming their operations with our AI agents.',
-            label: 'Contact Description',
-            maxLength: 200
-          },
-          {
-            id: 'office-address',
-            name: 'office-address',
-            type: 'textarea',
-            value: 'Turnbridge Wells, Kent, UK',
-            label: 'Office Address',
-            maxLength: 150
-          },
-          {
-            id: 'contact-email',
-            name: 'contact-email',
-            type: 'text',
-            value: 'info@agentic-ai.ltd',
-            label: 'Contact Email',
-            maxLength: 50
-          },
-          {
-            id: 'phone-number',
-            name: 'phone-number',
-            type: 'text',
-            value: '07771970567',
-            label: 'Phone Number',
-            maxLength: 20
-          }
-        ]
-      }
-    ];
-    setPages(samplePages);
-    setSelectedPage(samplePages[0]);
+    loadPages();
+    
+    // Real-time updates
+    const pagesSubscription = subscribeToTable('pages_content', () => {
+      loadPages();
+    });
+
+    return () => {
+      pagesSubscription.unsubscribe();
+    };
   }, []);
 
-  const filteredPages = pages.filter(page => 
-    page.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    page.slug.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const loadPages = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('pages_content')
+        .select(`
+          *,
+          last_modified_user:admin_users(username, email)
+        `)
+        .order('updated_at', { ascending: false });
 
-  const handleSaveChanges = () => {
+      if (error) {
+        console.error('Error loading pages:', error);
+        toast({
+          title: "Error Loading Pages",
+          description: "Failed to load page content from database.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setPages(data || []);
+    } catch (error) {
+      console.error('Error loading pages:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createPageFromTemplate = async (template: any) => {
+    try {
+      const pageData = {
+        page_name: template.name,
+        page_slug: template.slug,
+        content: {
+          sections: template.sections,
+          meta: {
+            title: `${template.name} - AgenticAI`,
+            description: `${template.name} page for AgenticAI`,
+            keywords: ['ai', 'automation', 'agentic'],
+          },
+          settings: {
+            is_published: false,
+            last_modified: new Date().toISOString(),
+            template: template.template
+          }
+        },
+        meta_title: `${template.name} - AgenticAI`,
+        meta_description: `${template.name} page for AgenticAI`,
+        seo_keywords: ['ai', 'automation', 'agentic'],
+        is_published: false,
+        last_modified_by: user?.id || ''
+      };
+
+      const { data, error } = await supabase
+        .from('pages_content')
+        .insert(pageData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating page:', error);
+        toast({
+          title: "Error Creating Page",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Page Created! 🎉",
+        description: `${template.name} page has been created successfully.`,
+      });
+
+      loadPages();
+    } catch (error) {
+      console.error('Error creating page from template:', error);
+    }
+  };
+
+  const handleSavePage = async () => {
     if (!selectedPage) return;
 
-    setPages(pages.map(p => 
-      p.id === selectedPage.id 
-        ? { ...selectedPage, lastModified: new Date().toISOString(), status: 'needs-review' as const }
-        : p
-    ));
+    try {
+      const { error } = await supabase
+        .from('pages_content')
+        .update({
+          ...selectedPage,
+          last_modified_by: user?.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedPage.id);
 
-    toast({
-      title: "Changes Saved! ✨",
-      description: `"${selectedPage.name}" has been updated successfully.`,
-    });
+      if (error) {
+        console.error('Error saving page:', error);
+        toast({
+          title: "Error Saving Page",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    setIsEditing(false);
+      toast({
+        title: "Page Saved! ✅",
+        description: "All changes have been saved successfully.",
+      });
+
+      loadPages();
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving page:', error);
+    }
   };
 
-  const handlePublishPage = (pageId: string) => {
-    setPages(pages.map(p => 
-      p.id === pageId 
-        ? { ...p, status: 'live' as const, lastModified: new Date().toISOString() }
-        : p
-    ));
+  const handleDeletePage = async (pageId: string, pageName: string) => {
+    if (!confirm(`Are you sure you want to delete "${pageName}"? This action cannot be undone.`)) {
+      return;
+    }
 
-    const page = pages.find(p => p.id === pageId);
-    toast({
-      title: "Page Published! 🚀",
-      description: `"${page?.name}" is now live on your website.`,
+    try {
+      const { error } = await supabase
+        .from('pages_content')
+        .delete()
+        .eq('id', pageId);
+
+      if (error) {
+        console.error('Error deleting page:', error);
+        toast({
+          title: "Error Deleting Page",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Page Deleted",
+        description: `"${pageName}" has been permanently deleted.`,
+      });
+
+      loadPages();
+      if (selectedPage?.id === pageId) {
+        setSelectedPage(null);
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error('Error deleting page:', error);
+    }
+  };
+
+  const togglePagePublished = async (pageId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('pages_content')
+        .update({ 
+          is_published: !currentStatus,
+          last_modified_by: user?.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', pageId);
+
+      if (error) {
+        console.error('Error updating page status:', error);
+        return;
+      }
+
+      toast({
+        title: !currentStatus ? "Page Published! 🚀" : "Page Unpublished",
+        description: !currentStatus 
+          ? "This page is now live on your website."
+          : "This page has been hidden from public view.",
+      });
+
+      loadPages();
+    } catch (error) {
+      console.error('Error toggling page status:', error);
+    }
+  };
+
+  const addSection = () => {
+    if (!selectedPage) return;
+
+    const newSection: PageSection = {
+      id: `section-${Date.now()}`,
+      name: `section-${Date.now()}`,
+      type: 'text',
+      value: '',
+      label: 'New Section',
+      description: 'Add content for this section'
+    };
+
+    setSelectedPage({
+      ...selectedPage,
+      content: {
+        ...selectedPage.content,
+        sections: [...selectedPage.content.sections, newSection]
+      }
     });
   };
 
-  const updateSectionValue = (sectionId: string, value: string | string[]) => {
+  const removeSection = (sectionId: string) => {
     if (!selectedPage) return;
 
     setSelectedPage({
       ...selectedPage,
-      sections: selectedPage.sections.map(section =>
-        section.id === sectionId ? { ...section, value } : section
-      )
+      content: {
+        ...selectedPage.content,
+        sections: selectedPage.content.sections.filter(s => s.id !== sectionId)
+      }
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'live': return 'bg-green-100 text-green-700';
-      case 'draft': return 'bg-yellow-100 text-yellow-700';
-      case 'needs-review': return 'bg-orange-100 text-orange-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+  const updateSection = (sectionId: string, field: string, value: any) => {
+    if (!selectedPage) return;
+
+    setSelectedPage({
+      ...selectedPage,
+      content: {
+        ...selectedPage.content,
+        sections: selectedPage.content.sections.map(section =>
+          section.id === sectionId ? { ...section, [field]: value } : section
+        )
+      }
+    });
   };
 
-  const getSeoScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 80) return 'text-yellow-600';
-    return 'text-red-600';
+  const filteredPages = pages.filter(page =>
+    page.page_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    page.page_slug.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStatusColor = (isPublished: boolean) => {
+    return isPublished ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
   };
 
-  const getDeviceIcon = (mode: string) => {
-    switch (mode) {
-      case 'desktop': return Monitor;
-      case 'tablet': return Tablet;
+  const getPreviewIcon = () => {
+    switch (previewMode) {
       case 'mobile': return Smartphone;
+      case 'tablet': return Tablet;
       default: return Monitor;
     }
   };
 
-  const totalViews = pages.reduce((sum, page) => sum + page.views, 0);
-  const livePages = pages.filter(p => p.status === 'live').length;
-  const avgSeoScore = Math.round(pages.reduce((sum, page) => sum + page.seoScore, 0) / pages.length);
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading page management...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Page Content Management</h2>
-          <p className="text-muted-foreground">Edit page content, SEO settings, and manage site copy</p>
+          <h1 className="text-3xl font-bold">Page Content Management</h1>
+          <p className="text-muted-foreground">Manage static pages, SEO, and site content</p>
         </div>
-        <div className="flex space-x-2">
-          {selectedPage && selectedPage.status !== 'live' && (
-            <Button 
-              variant="outline" 
-              onClick={() => handlePublishPage(selectedPage.id)}
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              Publish Page
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsEditing(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Custom Page
+          </Button>
+          <div className="relative group">
+            <Button className="bg-primary hover:bg-primary/90">
+              <Plus className="w-4 h-4 mr-2" />
+              From Template
             </Button>
-          )}
-          {isEditing && (
-            <Button onClick={handleSaveChanges}>
-              <Save className="w-4 h-4 mr-2" />
-              Save Changes
-            </Button>
-          )}
+            <div className="absolute top-full right-0 mt-2 w-64 bg-background border border-border rounded-lg shadow-lg p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              {pageTemplates.map((template, index) => (
+                <button
+                  key={index}
+                  onClick={() => createPageFromTemplate(template)}
+                  className="w-full text-left p-2 rounded hover:bg-muted transition-colors"
+                >
+                  <div className="font-medium">{template.name}</div>
+                  <div className="text-xs text-muted-foreground">/{template.slug}</div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Globe className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Pages</p>
-                <p className="text-xl font-bold">{pages.length}</p>
+                <p className="text-2xl font-bold">{pages.length}</p>
               </div>
+              <Globe className="w-8 h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Live Pages</p>
-                <p className="text-xl font-bold">{livePages}</p>
+                <p className="text-sm text-muted-foreground">Published</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {pages.filter(p => p.is_published).length}
+                </p>
               </div>
+              <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5 text-purple-600" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Views</p>
-                <p className="text-xl font-bold">{totalViews.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Drafts</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {pages.filter(p => !p.is_published).length}
+                </p>
               </div>
+              <Clock className="w-8 h-8 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Star className="w-5 h-5 text-yellow-600" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Avg SEO Score</p>
-                <p className={`text-xl font-bold ${getSeoScoreColor(avgSeoScore)}`}>{avgSeoScore}</p>
+                <p className="text-sm text-muted-foreground">SEO Score</p>
+                <p className="text-2xl font-bold text-blue-600">92%</p>
               </div>
+              <TrendingUp className="w-8 h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Pages List */}
-        <div className="lg:col-span-1">
+      {/* Search */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search pages by name or URL..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pages List */}
+      <div className="grid gap-4">
+        {filteredPages.length === 0 ? (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FileText className="w-5 h-5 mr-2" />
-                Site Pages
-              </CardTitle>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search pages..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="space-y-1">
-                {filteredPages.map((page) => (
-                  <div
-                    key={page.id}
-                    onClick={() => {
-                      setSelectedPage(page);
-                      setIsEditing(false);
-                    }}
-                    className={`p-4 cursor-pointer transition-colors hover:bg-muted/50 border-l-4 ${
-                      selectedPage?.id === page.id 
-                        ? 'bg-muted border-l-primary' 
-                        : 'border-l-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-medium text-sm">{page.name}</h4>
-                      <Badge className={`text-xs ${getStatusColor(page.status)}`}>
-                        {page.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-2">{page.slug}</p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{page.views.toLocaleString()} views</span>
-                      <span className={getSeoScoreColor(page.seoScore)}>
-                        SEO: {page.seoScore}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <CardContent className="p-8 text-center">
+              <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No pages found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm 
+                  ? 'Try adjusting your search terms.'
+                  : 'Get started by creating your first page.'
+                }
+              </p>
+              {!searchTerm && (
+                <Button onClick={() => setIsEditing(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create First Page
+                </Button>
+              )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* Page Editor */}
-        <div className="lg:col-span-3">
-          {selectedPage ? (
-            <div className="space-y-6">
-              {/* Page Header */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center">
-                        <Edit className="w-5 h-5 mr-2" />
-                        {selectedPage.name}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {selectedPage.slug} • Last modified: {new Date(selectedPage.lastModified).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={getStatusColor(selectedPage.status)}>
-                        {selectedPage.status}
+        ) : (
+          filteredPages.map((page) => (
+            <Card key={page.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold">{page.page_name}</h3>
+                      <Badge className={getStatusColor(page.is_published)}>
+                        {page.is_published ? 'Published' : 'Draft'}
                       </Badge>
-                      <Button
-                        variant={isEditing ? "default" : "outline"}
-                        onClick={() => setIsEditing(!isEditing)}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        {isEditing ? 'Editing' : 'Edit Page'}
-                      </Button>
+                      <Badge variant="outline">
+                        /{page.page_slug}
+                      </Badge>
                     </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              {/* Page Meta Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>SEO & Meta Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="page-title">Page Title</Label>
-                    <Input
-                      id="page-title"
-                      value={selectedPage.title}
-                      onChange={(e) => setSelectedPage({ ...selectedPage, title: e.target.value })}
-                      disabled={!isEditing}
-                      placeholder="Enter page title..."
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {selectedPage.title.length}/60 characters
+                    
+                    <p className="text-sm text-muted-foreground">
+                      {page.meta_description || 'No description available'}
                     </p>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="meta-description">Meta Description</Label>
-                    <Textarea
-                      id="meta-description"
-                      value={selectedPage.metaDescription}
-                      onChange={(e) => setSelectedPage({ ...selectedPage, metaDescription: e.target.value })}
-                      disabled={!isEditing}
-                      placeholder="Enter meta description..."
-                      rows={3}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {selectedPage.metaDescription.length}/160 characters
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${selectedPage.seoScore >= 90 ? 'bg-green-500' : selectedPage.seoScore >= 80 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-                      <span className="text-sm">SEO Score: {selectedPage.seoScore}/100</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${selectedPage.mobileOptimized ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                      <span className="text-sm">Mobile: {selectedPage.mobileOptimized ? 'Optimized' : 'Needs Work'}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${selectedPage.loadTime <= 1.5 ? 'bg-green-500' : selectedPage.loadTime <= 2.5 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-                      <span className="text-sm">Load: {selectedPage.loadTime}s</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Page Content Sections */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Page Content</CardTitle>
-                    <div className="flex space-x-1">
-                      {['desktop', 'tablet', 'mobile'].map((mode) => {
-                        const Icon = getDeviceIcon(mode);
-                        return (
-                          <Button
-                            key={mode}
-                            variant={previewMode === mode ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setPreviewMode(mode as any)}
-                          >
-                            <Icon className="w-4 h-4" />
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {selectedPage.sections.map((section) => (
-                    <div key={section.id} className="space-y-2">
-                      <Label htmlFor={section.id}>
-                        {section.label}
-                        {section.required && <span className="text-red-500 ml-1">*</span>}
-                      </Label>
-                      
-                      {section.type === 'text' && (
-                        <div>
-                          <Input
-                            id={section.id}
-                            value={section.value as string}
-                            onChange={(e) => updateSectionValue(section.id, e.target.value)}
-                            placeholder={section.placeholder}
-                            disabled={!isEditing}
-                            maxLength={section.maxLength}
-                          />
-                          {section.maxLength && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {(section.value as string).length}/{section.maxLength} characters
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {section.type === 'textarea' && (
-                        <div>
-                          <Textarea
-                            id={section.id}
-                            value={section.value as string}
-                            onChange={(e) => updateSectionValue(section.id, e.target.value)}
-                            placeholder={section.placeholder}
-                            disabled={!isEditing}
-                            rows={4}
-                            maxLength={section.maxLength}
-                          />
-                          {section.maxLength && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {(section.value as string).length}/{section.maxLength} characters
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {section.type === 'list' && (
-                        <div>
-                          <Textarea
-                            id={section.id}
-                            value={(section.value as string[]).join('\n')}
-                            onChange={(e) => updateSectionValue(section.id, e.target.value.split('\n').filter(Boolean))}
-                            placeholder={section.placeholder || "Enter one item per line"}
-                            disabled={!isEditing}
-                            rows={3}
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            One item per line • {(section.value as string[]).length} items
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Live Preview for some sections */}
-                      {(section.id === 'hero-title' || section.id === 'hero-subtitle') && (
-                        <div className="mt-2 p-3 bg-muted/50 rounded-lg border-l-4 border-blue-500">
-                          <p className="text-xs text-muted-foreground mb-1">Preview:</p>
-                          <div className={section.id === 'hero-title' ? 'text-lg font-bold' : 'text-sm text-muted-foreground'}>
-                            {section.value || section.placeholder}
-                          </div>
-                        </div>
+                    
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Modified {new Date(page.updated_at).toLocaleDateString()}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        {page.content.sections?.length || 0} sections
+                      </span>
+                      {page.meta_title && (
+                        <span className="flex items-center gap-1">
+                          <Tag className="w-3 h-3" />
+                          SEO optimized
+                        </span>
                       )}
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Page Analytics */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <TrendingUp className="w-5 h-5 mr-2" />
-                    Page Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
-                      <p className="text-2xl font-bold text-blue-600">{selectedPage.views.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">Total Views</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
-                      <p className={`text-2xl font-bold ${getSeoScoreColor(selectedPage.seoScore)}`}>
-                        {selectedPage.seoScore}%
-                      </p>
-                      <p className="text-sm text-muted-foreground">SEO Score</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
-                      <p className={`text-2xl font-bold ${selectedPage.loadTime <= 1.5 ? 'text-green-600' : 'text-orange-600'}`}>
-                        {selectedPage.loadTime}s
-                      </p>
-                      <p className="text-sm text-muted-foreground">Load Time</p>
-                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Select a Page to Edit</h3>
-                <p className="text-muted-foreground">
-                  Choose a page from the list to start editing content and SEO settings.
-                </p>
+                  
+                  <div className="flex items-center gap-2 ml-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => togglePagePublished(page.id, page.is_published)}
+                      className={page.is_published ? "text-green-600" : "text-yellow-600"}
+                    >
+                      {page.is_published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPage(page);
+                        setIsEditing(true);
+                      }}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(`/${page.page_slug}`, '_blank')}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeletePage(page.id, page.page_name)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          )}
-        </div>
+          ))
+        )}
       </div>
+
+      {/* Edit Page Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-6xl max-h-[90vh] overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>
+                {selectedPage ? `Edit ${selectedPage.page_name}` : 'Create New Page'}
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center border rounded-lg">
+                  {(['desktop', 'tablet', 'mobile'] as const).map((mode) => {
+                    const Icon = mode === 'desktop' ? Monitor : mode === 'tablet' ? Tablet : Smartphone;
+                    return (
+                      <button
+                        key={mode}
+                        onClick={() => setPreviewMode(mode)}
+                        className={`p-2 ${previewMode === mode ? 'bg-primary text-white' : 'hover:bg-muted'}`}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </button>
+                    );
+                  })}
+                </div>
+                <Button variant="outline" onClick={() => { setIsEditing(false); setSelectedPage(null); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSavePage}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Page
+                </Button>
+              </div>
+            </CardHeader>
+            
+            <div className="flex h-[calc(90vh-8rem)]">
+              {/* Editor Sidebar */}
+              <div className="w-1/2 border-r overflow-y-auto">
+                <div className="p-6">
+                  {/* Tab Navigation */}
+                  <div className="flex border-b mb-6">
+                    {[
+                      { id: 'content', label: 'Content', icon: FileText },
+                      { id: 'seo', label: 'SEO', icon: Tag },
+                      { id: 'settings', label: 'Settings', icon: Settings }
+                    ].map((tab) => {
+                      const TabIcon = tab.icon;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id as any)}
+                          className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+                            activeTab === tab.id 
+                              ? 'border-primary text-primary' 
+                              : 'border-transparent text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <TabIcon className="w-4 h-4" />
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Content Tab */}
+                  {activeTab === 'content' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold">Page Sections</h3>
+                        <Button size="sm" onClick={addSection}>
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add Section
+                        </Button>
+                      </div>
+                      
+                      {selectedPage?.content.sections.map((section, index) => (
+                        <Card key={section.id} className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Input
+                                value={section.label}
+                                onChange={(e) => updateSection(section.id, 'label', e.target.value)}
+                                className="font-medium"
+                                placeholder="Section label"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeSection(section.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            
+                            <select
+                              value={section.type}
+                              onChange={(e) => updateSection(section.id, 'type', e.target.value)}
+                              className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                            >
+                              <option value="text">Text</option>
+                              <option value="textarea">Textarea</option>
+                              <option value="html">HTML</option>
+                              <option value="image">Image URL</option>
+                              <option value="link">Link</option>
+                              <option value="list">List</option>
+                              <option value="json">JSON Data</option>
+                            </select>
+                            
+                            {section.type === 'textarea' || section.type === 'html' ? (
+                              <Textarea
+                                value={section.value as string}
+                                onChange={(e) => updateSection(section.id, 'value', e.target.value)}
+                                placeholder={section.placeholder || `Enter ${section.label}`}
+                                rows={4}
+                              />
+                            ) : section.type === 'list' ? (
+                              <Textarea
+                                value={(section.value as string[])?.join('\n') || ''}
+                                onChange={(e) => updateSection(section.id, 'value', e.target.value.split('\n').filter(Boolean))}
+                                placeholder="One item per line"
+                                rows={3}
+                              />
+                            ) : section.type === 'json' ? (
+                              <Textarea
+                                value={typeof section.value === 'object' ? JSON.stringify(section.value, null, 2) : section.value as string}
+                                onChange={(e) => {
+                                  try {
+                                    const parsed = JSON.parse(e.target.value);
+                                    updateSection(section.id, 'value', parsed);
+                                  } catch {
+                                    updateSection(section.id, 'value', e.target.value);
+                                  }
+                                }}
+                                placeholder="Enter valid JSON"
+                                rows={6}
+                              />
+                            ) : (
+                              <Input
+                                value={section.value as string}
+                                onChange={(e) => updateSection(section.id, 'value', e.target.value)}
+                                placeholder={section.placeholder || `Enter ${section.label}`}
+                              />
+                            )}
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* SEO Tab */}
+                  {activeTab === 'seo' && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">SEO Settings</h3>
+                      
+                      <div>
+                        <Label>Meta Title</Label>
+                        <Input
+                          value={selectedPage?.meta_title || ''}
+                          onChange={(e) => setSelectedPage(prev => prev ? {...prev, meta_title: e.target.value} : null)}
+                          placeholder="Page title for search engines"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label>Meta Description</Label>
+                        <Textarea
+                          value={selectedPage?.meta_description || ''}
+                          onChange={(e) => setSelectedPage(prev => prev ? {...prev, meta_description: e.target.value} : null)}
+                          placeholder="Brief description for search results"
+                          rows={3}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label>Keywords (comma separated)</Label>
+                        <Input
+                          value={selectedPage?.seo_keywords?.join(', ') || ''}
+                          onChange={(e) => setSelectedPage(prev => prev ? {
+                            ...prev, 
+                            seo_keywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean)
+                          } : null)}
+                          placeholder="keyword1, keyword2, keyword3"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Settings Tab */}
+                  {activeTab === 'settings' && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Page Settings</h3>
+                      
+                      <div>
+                        <Label>Page Name</Label>
+                        <Input
+                          value={selectedPage?.page_name || ''}
+                          onChange={(e) => setSelectedPage(prev => prev ? {...prev, page_name: e.target.value} : null)}
+                          placeholder="Internal page name"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label>URL Slug</Label>
+                        <Input
+                          value={selectedPage?.page_slug || ''}
+                          onChange={(e) => setSelectedPage(prev => prev ? {...prev, page_slug: e.target.value} : null)}
+                          placeholder="url-slug"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedPage?.is_published || false}
+                          onChange={(e) => setSelectedPage(prev => prev ? {...prev, is_published: e.target.checked} : null)}
+                          className="rounded"
+                        />
+                        <Label>Published (visible to public)</Label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Preview Panel */}
+              <div className="w-1/2 bg-muted/20">
+                <div className="p-6">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className={`transition-all duration-300 ${
+                      previewMode === 'mobile' ? 'w-80' : 
+                      previewMode === 'tablet' ? 'w-96' : 
+                      'w-full'
+                    }`}>
+                      <div className="bg-white border border-border rounded-lg shadow-lg min-h-96 p-6">
+                        <div className="text-center text-muted-foreground">
+                          <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                          <h3 className="text-lg font-semibold mb-2">Live Preview</h3>
+                          <p className="text-sm">
+                            Your page content will appear here based on the sections you create.
+                          </p>
+                          
+                          {selectedPage?.content.sections.length > 0 && (
+                            <div className="mt-6 space-y-4 text-left">
+                              {selectedPage.content.sections.map((section) => (
+                                <div key={section.id} className="border-l-4 border-primary pl-4">
+                                  <h4 className="font-medium text-sm text-primary">{section.label}</h4>
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    {section.type === 'list' && Array.isArray(section.value) 
+                                      ? (section.value as string[]).join(', ')
+                                      : section.type === 'json' && typeof section.value === 'object'
+                                      ? JSON.stringify(section.value).substring(0, 100) + '...'
+                                      : String(section.value || '').substring(0, 100) + (String(section.value || '').length > 100 ? '...' : '')
+                                    }
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

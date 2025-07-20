@@ -13,6 +13,9 @@ import AdminDashboard from "./components/admin/AdminDashboard";
 import BlogManagement from "./components/admin/BlogManagement";
 import PagesManagement from "./components/admin/PagesManagement";
 import AnalyticsManagement from "./components/admin/AnalyticsManagement";
+import ResourcesManagement from "./components/admin/ResourcesManagement";
+import ServicesManagement from "./components/admin/ServicesManagement";
+import UseCasesManagement from "./components/admin/UseCasesManagement";
 
 // Public Pages
 import Home from "./pages/Home";
@@ -47,7 +50,15 @@ import ContractAnalysis from "./pages/use-cases/ContractAnalysis";
 import TalentMatching from "./pages/use-cases/TalentMatching";
 import PersonalizedLearning from "./pages/use-cases/PersonalizedLearning";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: true,
+      retry: 3,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -57,8 +68,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Admin Routes */}
+            {/* Admin Login Route - FIXED ROUTING */}
             <Route path="/agentic-boss" element={<AgenticBoss />} />
+            
+            {/* Protected Admin Routes */}
             <Route 
               path="/agentic-boss/*" 
               element={
@@ -71,9 +84,9 @@ const App = () => (
               <Route path="blog" element={<BlogManagement />} />
               <Route path="pages" element={<PagesManagement />} />
               <Route path="analytics" element={<AnalyticsManagement />} />
-              <Route path="resources" element={<div className="p-8 text-center text-muted-foreground">Resources Management - Coming Soon!</div>} />
-              <Route path="services" element={<div className="p-8 text-center text-muted-foreground">Services Management - Coming Soon!</div>} />
-              <Route path="use-cases" element={<div className="p-8 text-center text-muted-foreground">Use Cases Management - Coming Soon!</div>} />
+              <Route path="resources" element={<ResourcesManagement />} />
+              <Route path="services" element={<ServicesManagement />} />
+              <Route path="use-cases" element={<UseCasesManagement />} />
               <Route index element={<Navigate to="dashboard" replace />} />
             </Route>
 

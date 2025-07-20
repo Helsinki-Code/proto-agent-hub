@@ -6,668 +6,464 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supabase, UseCase, subscribeToTable } from '@/lib/supabase';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { 
-  Plus, 
+  Target, 
   Edit, 
-  Trash2, 
+  Save, 
+  Plus, 
   Search, 
+  Star,
+  Trash2,
   TrendingUp,
   Building2,
+  CheckCircle,
+  BarChart3,
   Users,
   DollarSign,
   Clock,
-  CheckCircle,
-  Save,
-  X,
-  Star,
+  ArrowUp,
+  ArrowDown,
   Eye,
-  Calendar,
-  Target,
-  BarChart3,
-  Award
+  EyeOff,
+  Award,
+  Lightbulb
 } from 'lucide-react';
-
-interface UseCase {
-  id: string;
-  title: string;
-  clientName: string;
-  industry: string;
-  description: string;
-  challenge: string;
-  solution: string;
-  results: string;
-  metrics: {
-    efficiency: string;
-    accuracy: string;
-    cost: string;
-    roi?: string;
-  };
-  technologies: string[];
-  teamSize: string;
-  duration: string;
-  timeline: string;
-  testimonial?: {
-    quote: string;
-    author: string;
-    position: string;
-  };
-  featured: boolean;
-  published: boolean;
-  status: 'draft' | 'review' | 'published' | 'archived';
-  category: 'automation' | 'analysis' | 'optimization' | 'integration' | 'strategy';
-  tags: string[];
-  images: string[];
-  createdDate: string;
-  updatedDate: string;
-  publishedDate?: string;
-}
 
 const UseCasesManagement = () => {
   const { toast } = useToast();
+  const { user } = useAdminAuth();
   const [useCases, setUseCases] = useState<UseCase[]>([]);
-  const [filteredUseCases, setFilteredUseCases] = useState<UseCase[]>([]);
+  const [selectedUseCase, setSelectedUseCase] = useState<UseCase | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editingUseCase, setEditingUseCase] = useState<UseCase | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterIndustry, setFilterIndustry] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterIndustry, setFilterIndustry] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  
+  const [newUseCase, setNewUseCase] = useState({
+    title: '',
+    slug: '',
+    industry: '',
+    challenge: '',
+    solution: '',
+    results: {
+      cost_reduction: '',
+      time_saved: '',
+      efficiency_gain: '',
+      roi_percentage: '',
+      custom_metrics: [] as Array<{metric: string, value: string, description: string}>
+    },
+    metrics: {
+      implementation_time: '',
+      team_size: '',
+      complexity_level: 'Medium'
+    },
+    client_name: '',
+    client_logo: '',
+    featured_image: '',
+    tags: [] as string[],
+    is_featured: false,
+    is_published: true,
+    order_index: 0,
+  });
 
-  // Sample use cases data
+  // Industry options - you know what's interesting? I've noticed these are the sectors where AI actually makes the biggest impact
+  const industries = [
+    'Financial Services',
+    'Healthcare',
+    'Manufacturing', 
+    'Retail & E-commerce',
+    'Technology',
+    'Insurance',
+    'Legal Services',
+    'Real Estate',
+    'Education',
+    'Logistics',
+    'Energy',
+    'Telecommunications',
+    'Government',
+    'Non-profit'
+  ];
+
+  const complexityLevels = ['Low', 'Medium', 'High', 'Enterprise'];
+
+  // Load use cases on mount
   useEffect(() => {
-    const sampleUseCases: UseCase[] = [
-      {
-        id: '1',
-        title: 'Automated Loan Processing Revolution',
-        clientName: 'SecureBank Financial',
-        industry: 'Finance',
-        description: 'Complete automation of loan application processing using AI agents for document verification, risk assessment, and approval workflows.',
-        challenge: 'Manual loan processing took 14 days on average, with high error rates and inconsistent decision-making across different loan officers.',
-        solution: 'Deployed intelligent AI agents to handle document verification, credit scoring, risk assessment, and automated approval for qualifying applications.',
-        results: 'Reduced processing time from 14 days to 2 hours for standard applications, improved accuracy to 99.2%, and increased customer satisfaction by 85%.',
-        metrics: {
-          efficiency: '75% faster processing',
-          accuracy: '99.2% accuracy rate',
-          cost: '60% cost reduction',
-          roi: '340% ROI in first year'
-        },
-        technologies: ['LangChain', 'Python', 'PostgreSQL', 'FastAPI', 'OCR'],
-        teamSize: '4 specialists',
-        duration: '3 months',
-        timeline: 'Q4 2023 - Q1 2024',
-        testimonial: {
-          quote: 'The AI loan processing system has transformed our operations. We\'re now processing 5x more applications with better accuracy.',
-          author: 'Sarah Johnson',
-          position: 'VP of Operations, SecureBank Financial'
-        },
-        featured: true,
-        published: true,
-        status: 'published',
-        category: 'automation',
-        tags: ['Finance', 'Automation', 'Document Processing', 'Risk Assessment'],
-        images: ['/case-studies/securebank-dashboard.jpg', '/case-studies/securebank-workflow.jpg'],
-        createdDate: '2024-01-15',
-        updatedDate: '2024-01-15',
-        publishedDate: '2024-01-15'
-      },
-      {
-        id: '2',
-        title: 'Healthcare Care Coordination AI',
-        clientName: 'MedCenter Health System',
-        industry: 'Healthcare',
-        description: 'AI-powered patient care coordination system that manages appointments, treatment plans, and cross-departmental communication.',
-        challenge: 'Poor coordination between departments led to delayed treatments, duplicate tests, and patient dissatisfaction.',
-        solution: 'Implemented intelligent agents to coordinate care plans, schedule appointments, track patient progress, and facilitate communication between departments.',
-        results: 'Improved patient satisfaction by 72%, reduced duplicate procedures by 85%, and decreased average treatment time by 40%.',
-        metrics: {
-          efficiency: '50% faster coordination',
-          accuracy: '95% patient satisfaction',
-          cost: '40% operational savings'
-        },
-        technologies: ['Node.js', 'React', 'MongoDB', 'WebSocket', 'HL7 FHIR'],
-        teamSize: '6 specialists',
-        duration: '4 months',
-        timeline: 'Q3 2023 - Q4 2023',
-        testimonial: {
-          quote: 'Our patient care has never been more coordinated. The AI system ensures nothing falls through the cracks.',
-          author: 'Dr. Michael Chen',
-          position: 'Chief Medical Officer, MedCenter Health System'
-        },
-        featured: false,
-        published: true,
-        status: 'published',
-        category: 'automation',
-        tags: ['Healthcare', 'Coordination', 'Patient Care', 'Communication'],
-        images: ['/case-studies/medcenter-interface.jpg'],
-        createdDate: '2024-01-10',
-        updatedDate: '2024-01-12',
-        publishedDate: '2024-01-12'
-      },
-      {
-        id: '3',
-        title: 'Retail Dynamic Pricing Engine',
-        clientName: 'GlobalMart Retail',
-        industry: 'Retail',
-        description: 'AI-driven dynamic pricing system that optimizes product prices in real-time based on demand, competition, and inventory levels.',
-        challenge: 'Static pricing led to lost revenue opportunities and excess inventory, especially during seasonal fluctuations.',
-        solution: 'Built intelligent pricing agents that analyze market conditions, competitor pricing, demand patterns, and inventory levels to optimize prices dynamically.',
-        results: 'Increased revenue by 28%, reduced inventory waste by 45%, and improved profit margins by 22% across all product categories.',
-        metrics: {
-          efficiency: '30% revenue increase',
-          accuracy: '85% demand forecast accuracy',
-          cost: '25% inventory reduction'
-        },
-        technologies: ['Python', 'TensorFlow', 'Redis', 'Apache Kafka', 'Elasticsearch'],
-        teamSize: '5 specialists',
-        duration: '5 months',
-        timeline: 'Q2 2023 - Q3 2023',
-        featured: false,
-        published: false,
-        status: 'review',
-        category: 'optimization',
-        tags: ['Retail', 'Pricing', 'Machine Learning', 'Optimization'],
-        images: ['/case-studies/globalmart-dashboard.jpg', '/case-studies/globalmart-analytics.jpg'],
-        createdDate: '2024-01-08',
-        updatedDate: '2024-01-08'
-      }
-    ];
-    setUseCases(sampleUseCases);
-    setFilteredUseCases(sampleUseCases);
+    loadUseCases();
+    
+    // Set up real-time subscription - honestly, seeing these success stories update live gives me chills
+    const useCasesSubscription = subscribeToTable('use_cases', () => {
+      loadUseCases();
+    });
+
+    return () => {
+      useCasesSubscription.unsubscribe();
+    };
   }, []);
 
-  // Filter use cases
-  useEffect(() => {
-    let filtered = useCases;
+  const loadUseCases = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('use_cases')
+        .select('*')
+        .order('order_index', { ascending: true });
 
-    if (searchTerm) {
-      filtered = filtered.filter(useCase => 
-        useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        useCase.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        useCase.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        useCase.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      if (error) {
+        console.error('Error loading use cases:', error);
+        toast({
+          title: "Error Loading Use Cases",
+          description: "Failed to load use cases from database.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setUseCases(data || []);
+    } catch (error) {
+      console.error('Error loading use cases:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    if (filterIndustry !== 'all') {
-      filtered = filtered.filter(useCase => useCase.industry === filterIndustry);
-    }
-
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(useCase => useCase.status === filterStatus);
-    }
-
-    setFilteredUseCases(filtered);
-  }, [useCases, searchTerm, filterIndustry, filterStatus]);
-
-  const industries = ['Finance', 'Healthcare', 'Retail', 'Manufacturing', 'Education', 'Technology'];
-  const statuses = ['draft', 'review', 'published', 'archived'];
-  const categories = ['automation', 'analysis', 'optimization', 'integration', 'strategy'];
-
-  const handleCreateNew = () => {
-    const newUseCase: UseCase = {
-      id: Date.now().toString(),
-      title: '',
-      clientName: '',
-      industry: 'Finance',
-      description: '',
-      challenge: '',
-      solution: '',
-      results: '',
-      metrics: {
-        efficiency: '',
-        accuracy: '',
-        cost: ''
-      },
-      technologies: [''],
-      teamSize: '',
-      duration: '',
-      timeline: '',
-      featured: false,
-      published: false,
-      status: 'draft',
-      category: 'automation',
-      tags: [''],
-      images: [''],
-      createdDate: new Date().toISOString().split('T')[0],
-      updatedDate: new Date().toISOString().split('T')[0]
-    };
-    setEditingUseCase(newUseCase);
-    setIsEditing(true);
   };
 
-  const handleEdit = (useCase: UseCase) => {
-    setEditingUseCase({ ...useCase });
-    setIsEditing(true);
+  const generateSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
   };
 
-  const handleSave = () => {
-    if (!editingUseCase) return;
-
-    if (!editingUseCase.title || !editingUseCase.clientName || !editingUseCase.description) {
+  const handleCreateUseCase = async () => {
+    if (!newUseCase.title || !newUseCase.industry || !newUseCase.challenge) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in title, client name, and description before saving.",
+        title: "Missing Required Fields",
+        description: "Please fill in title, industry, and challenge description.",
         variant: "destructive",
       });
       return;
     }
 
-    if (useCases.find(u => u.id === editingUseCase.id)) {
-      setUseCases(useCases.map(u => u.id === editingUseCase.id ? editingUseCase : u));
+    const slug = newUseCase.slug || generateSlug(newUseCase.title);
+    
+    try {
+      // Get the next order index
+      const maxOrder = Math.max(...useCases.map(uc => uc.order_index), -1);
+      
+      const { data, error } = await supabase
+        .from('use_cases')
+        .insert({
+          ...newUseCase,
+          slug,
+          order_index: maxOrder + 1,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating use case:', error);
+        toast({
+          title: "Error Creating Use Case",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
-        title: "Use Case Updated! ✨",
-        description: `"${editingUseCase.title}" has been saved successfully.`,
+        title: "Success Story Added! 🎉",
+        description: `"${newUseCase.title}" has been added to your success portfolio.`,
+      });
+
+      // Reset form
+      setNewUseCase({
+        title: '',
+        slug: '',
+        industry: '',
+        challenge: '',
+        solution: '',
+        results: {
+          cost_reduction: '',
+          time_saved: '',
+          efficiency_gain: '',
+          roi_percentage: '',
+          custom_metrics: []
+        },
+        metrics: {
+          implementation_time: '',
+          team_size: '',
+          complexity_level: 'Medium'
+        },
+        client_name: '',
+        client_logo: '',
+        featured_image: '',
+        tags: [],
+        is_featured: false,
+        is_published: true,
+        order_index: 0,
+      });
+
+      setIsEditing(false);
+      loadUseCases();
+    } catch (error) {
+      console.error('Error creating use case:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create use case. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateUseCase = async (useCaseId: string, updates: Partial<UseCase>) => {
+    try {
+      const { error } = await supabase
+        .from('use_cases')
+        .update(updates)
+        .eq('id', useCaseId);
+
+      if (error) {
+        console.error('Error updating use case:', error);
+        toast({
+          title: "Error Updating Use Case",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Use Case Updated! ✅",
+        description: "Changes have been saved successfully.",
+      });
+
+      loadUseCases();
+      setSelectedUseCase(null);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating use case:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update use case. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteUseCase = async (useCaseId: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('use_cases')
+        .delete()
+        .eq('id', useCaseId);
+
+      if (error) {
+        console.error('Error deleting use case:', error);
+        toast({
+          title: "Error Deleting Use Case",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Use Case Deleted",
+        description: `"${title}" has been permanently deleted.`,
+      });
+
+      loadUseCases();
+    } catch (error) {
+      console.error('Error deleting use case:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete use case. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleFeatured = async (useCaseId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('use_cases')
+        .update({ is_featured: !currentStatus })
+        .eq('id', useCaseId);
+
+      if (error) {
+        console.error('Error updating featured status:', error);
+        return;
+      }
+
+      toast({
+        title: !currentStatus ? "Use Case Featured! ⭐" : "Removed from Featured",
+        description: !currentStatus 
+          ? "This success story will now appear in featured sections."
+          : "This use case has been removed from featured sections.",
+      });
+
+      loadUseCases();
+    } catch (error) {
+      console.error('Error toggling featured status:', error);
+    }
+  };
+
+  const handleTogglePublished = async (useCaseId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('use_cases')
+        .update({ is_published: !currentStatus })
+        .eq('id', useCaseId);
+
+      if (error) {
+        console.error('Error updating published status:', error);
+        return;
+      }
+
+      toast({
+        title: !currentStatus ? "Use Case Published! 🚀" : "Use Case Unpublished",
+        description: !currentStatus 
+          ? "This success story is now visible to visitors."
+          : "This use case has been hidden from public view.",
+      });
+
+      loadUseCases();
+    } catch (error) {
+      console.error('Error toggling published status:', error);
+    }
+  };
+
+  const handleReorderUseCase = async (useCaseId: string, direction: 'up' | 'down') => {
+    const currentIndex = useCases.findIndex(uc => uc.id === useCaseId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= useCases.length) return;
+
+    const currentUseCase = useCases[currentIndex];
+    const swapUseCase = useCases[newIndex];
+
+    try {
+      // Swap order indices
+      await Promise.all([
+        supabase
+          .from('use_cases')
+          .update({ order_index: swapUseCase.order_index })
+          .eq('id', currentUseCase.id),
+        supabase
+          .from('use_cases')
+          .update({ order_index: currentUseCase.order_index })
+          .eq('id', swapUseCase.id)
+      ]);
+
+      loadUseCases();
+    } catch (error) {
+      console.error('Error reordering use cases:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reorder use cases.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addCustomMetric = () => {
+    const current = selectedUseCase || newUseCase;
+    const newMetric = { metric: '', value: '', description: '' };
+    
+    if (selectedUseCase) {
+      setSelectedUseCase({
+        ...selectedUseCase,
+        results: {
+          ...selectedUseCase.results,
+          custom_metrics: [...(selectedUseCase.results?.custom_metrics || []), newMetric]
+        }
       });
     } else {
-      setUseCases([editingUseCase, ...useCases]);
-      toast({
-        title: "New Use Case Created! 🎉",
-        description: `"${editingUseCase.title}" has been added to your portfolio.`,
+      setNewUseCase({
+        ...newUseCase,
+        results: {
+          ...newUseCase.results,
+          custom_metrics: [...newUseCase.results.custom_metrics, newMetric]
+        }
       });
     }
-
-    setIsEditing(false);
-    setEditingUseCase(null);
   };
 
-  const handleDelete = (id: string) => {
-    const useCase = useCases.find(u => u.id === id);
-    setUseCases(useCases.filter(u => u.id !== id));
-    toast({
-      title: "Use Case Deleted",
-      description: `"${useCase?.title}" has been removed from your portfolio.`,
-      variant: "destructive",
-    });
-  };
-
-  const handlePublish = (id: string) => {
-    setUseCases(useCases.map(u => 
-      u.id === id 
-        ? { ...u, status: 'published' as const, published: true, publishedDate: new Date().toISOString().split('T')[0] }
-        : u
-    ));
-    const useCase = useCases.find(u => u.id === id);
-    toast({
-      title: "Use Case Published! 🚀",
-      description: `"${useCase?.title}" is now live on your website.`,
-    });
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'automation': return 'bg-blue-100 text-blue-700';
-      case 'analysis': return 'bg-green-100 text-green-700';
-      case 'optimization': return 'bg-purple-100 text-purple-700';
-      case 'integration': return 'bg-orange-100 text-orange-700';
-      case 'strategy': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+  const removeCustomMetric = (index: number) => {
+    if (selectedUseCase) {
+      const metrics = [...(selectedUseCase.results?.custom_metrics || [])];
+      metrics.splice(index, 1);
+      setSelectedUseCase({
+        ...selectedUseCase,
+        results: {
+          ...selectedUseCase.results,
+          custom_metrics: metrics
+        }
+      });
+    } else {
+      const metrics = [...newUseCase.results.custom_metrics];
+      metrics.splice(index, 1);
+      setNewUseCase({
+        ...newUseCase,
+        results: {
+          ...newUseCase.results,
+          custom_metrics: metrics
+        }
+      });
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'published': return 'bg-green-100 text-green-700';
-      case 'review': return 'bg-yellow-100 text-yellow-700';
-      case 'draft': return 'bg-gray-100 text-gray-700';
-      case 'archived': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+  const filteredUseCases = useCases.filter(useCase => {
+    const matchesSearch = useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         useCase.industry?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         useCase.challenge?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         useCase.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesIndustry = filterIndustry === 'all' || useCase.industry === filterIndustry;
+    const matchesStatus = filterStatus === 'all' || 
+                         (filterStatus === 'published' && useCase.is_published) ||
+                         (filterStatus === 'unpublished' && !useCase.is_published) ||
+                         (filterStatus === 'featured' && useCase.is_featured);
+    
+    return matchesSearch && matchesIndustry && matchesStatus;
+  });
+
+  const getComplexityColor = (level: string) => {
+    const colors = {
+      'Low': 'bg-green-100 text-green-700',
+      'Medium': 'bg-yellow-100 text-yellow-700',
+      'High': 'bg-orange-100 text-orange-700',
+      'Enterprise': 'bg-red-100 text-red-700',
+    };
+    return colors[level as keyof typeof colors] || 'bg-gray-100 text-gray-700';
   };
 
-  const publishedCount = useCases.filter(u => u.status === 'published').length;
-  const draftCount = useCases.filter(u => u.status === 'draft').length;
-  const featuredCount = useCases.filter(u => u.featured).length;
+  // Quick function to extract key metrics for the cards
+  const getKeyMetrics = (useCase: UseCase) => {
+    const results = useCase.results || {};
+    return {
+      roi: results.roi_percentage ? `${results.roi_percentage}% ROI` : null,
+      cost: results.cost_reduction ? `${results.cost_reduction} saved` : null,
+      time: results.time_saved ? `${results.time_saved} faster` : null,
+      efficiency: results.efficiency_gain ? `${results.efficiency_gain} efficiency` : null
+    };
+  };
 
-  if (isEditing && editingUseCase) {
+  if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">
-              {useCases.find(u => u.id === editingUseCase.id) ? 'Edit Use Case' : 'Create New Use Case'}
-            </h2>
-            <p className="text-muted-foreground">
-              {useCases.find(u => u.id === editingUseCase.id) ? 'Update your case study details' : 'Add a new success story to your portfolio'}
-            </p>
-          </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>
-              <Save className="w-4 h-4 mr-2" />
-              Save Use Case
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Case Study Title</Label>
-                  <Input
-                    id="title"
-                    value={editingUseCase.title}
-                    onChange={(e) => setEditingUseCase({ ...editingUseCase, title: e.target.value })}
-                    placeholder="Enter case study title..."
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="clientName">Client Name</Label>
-                    <Input
-                      id="clientName"
-                      value={editingUseCase.clientName}
-                      onChange={(e) => setEditingUseCase({ ...editingUseCase, clientName: e.target.value })}
-                      placeholder="Client company name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="industry">Industry</Label>
-                    <select
-                      id="industry"
-                      value={editingUseCase.industry}
-                      onChange={(e) => setEditingUseCase({ ...editingUseCase, industry: e.target.value })}
-                      className="w-full p-2 border border-input rounded-md bg-background"
-                    >
-                      {industries.map(industry => (
-                        <option key={industry} value={industry}>{industry}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="description">Project Description</Label>
-                  <Textarea
-                    id="description"
-                    value={editingUseCase.description}
-                    onChange={(e) => setEditingUseCase({ ...editingUseCase, description: e.target.value })}
-                    placeholder="Brief overview of the project..."
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Challenge, Solution & Results</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="challenge">Challenge</Label>
-                  <Textarea
-                    id="challenge"
-                    value={editingUseCase.challenge}
-                    onChange={(e) => setEditingUseCase({ ...editingUseCase, challenge: e.target.value })}
-                    placeholder="What problem did the client face?"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="solution">Solution</Label>
-                  <Textarea
-                    id="solution"
-                    value={editingUseCase.solution}
-                    onChange={(e) => setEditingUseCase({ ...editingUseCase, solution: e.target.value })}
-                    placeholder="How did you solve it?"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="results">Results</Label>
-                  <Textarea
-                    id="results"
-                    value={editingUseCase.results}
-                    onChange={(e) => setEditingUseCase({ ...editingUseCase, results: e.target.value })}
-                    placeholder="What were the outcomes?"
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Key Metrics</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="efficiency">Efficiency Improvement</Label>
-                    <Input
-                      id="efficiency"
-                      value={editingUseCase.metrics.efficiency}
-                      onChange={(e) => setEditingUseCase({ 
-                        ...editingUseCase, 
-                        metrics: { ...editingUseCase.metrics, efficiency: e.target.value }
-                      })}
-                      placeholder="75% faster processing"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="accuracy">Accuracy/Quality</Label>
-                    <Input
-                      id="accuracy"
-                      value={editingUseCase.metrics.accuracy}
-                      onChange={(e) => setEditingUseCase({ 
-                        ...editingUseCase, 
-                        metrics: { ...editingUseCase.metrics, accuracy: e.target.value }
-                      })}
-                      placeholder="99.2% accuracy rate"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="cost">Cost Impact</Label>
-                    <Input
-                      id="cost"
-                      value={editingUseCase.metrics.cost}
-                      onChange={(e) => setEditingUseCase({ 
-                        ...editingUseCase, 
-                        metrics: { ...editingUseCase.metrics, cost: e.target.value }
-                      })}
-                      placeholder="60% cost reduction"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="roi">ROI (Optional)</Label>
-                    <Input
-                      id="roi"
-                      value={editingUseCase.metrics.roi || ''}
-                      onChange={(e) => setEditingUseCase({ 
-                        ...editingUseCase, 
-                        metrics: { ...editingUseCase.metrics, roi: e.target.value }
-                      })}
-                      placeholder="340% ROI in first year"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Client Testimonial (Optional)</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="testimonialQuote">Quote</Label>
-                  <Textarea
-                    id="testimonialQuote"
-                    value={editingUseCase.testimonial?.quote || ''}
-                    onChange={(e) => setEditingUseCase({ 
-                      ...editingUseCase, 
-                      testimonial: { 
-                        ...editingUseCase.testimonial,
-                        quote: e.target.value,
-                        author: editingUseCase.testimonial?.author || '',
-                        position: editingUseCase.testimonial?.position || ''
-                      }
-                    })}
-                    placeholder="Client testimonial quote..."
-                    rows={2}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="testimonialAuthor">Author Name</Label>
-                    <Input
-                      id="testimonialAuthor"
-                      value={editingUseCase.testimonial?.author || ''}
-                      onChange={(e) => setEditingUseCase({ 
-                        ...editingUseCase, 
-                        testimonial: { 
-                          ...editingUseCase.testimonial,
-                          quote: editingUseCase.testimonial?.quote || '',
-                          author: e.target.value,
-                          position: editingUseCase.testimonial?.position || ''
-                        }
-                      })}
-                      placeholder="John Smith"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="testimonialPosition">Position</Label>
-                    <Input
-                      id="testimonialPosition"
-                      value={editingUseCase.testimonial?.position || ''}
-                      onChange={(e) => setEditingUseCase({ 
-                        ...editingUseCase, 
-                        testimonial: { 
-                          ...editingUseCase.testimonial,
-                          quote: editingUseCase.testimonial?.quote || '',
-                          author: editingUseCase.testimonial?.author || '',
-                          position: e.target.value
-                        }
-                      })}
-                      placeholder="CEO, Company Name"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <select
-                    id="category"
-                    value={editingUseCase.category}
-                    onChange={(e) => setEditingUseCase({ ...editingUseCase, category: e.target.value as any })}
-                    className="w-full p-2 border border-input rounded-md bg-background"
-                  >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>
-                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <select
-                    id="status"
-                    value={editingUseCase.status}
-                    onChange={(e) => setEditingUseCase({ ...editingUseCase, status: e.target.value as any })}
-                    className="w-full p-2 border border-input rounded-md bg-background"
-                  >
-                    {statuses.map(status => (
-                      <option key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="teamSize">Team Size</Label>
-                    <Input
-                      id="teamSize"
-                      value={editingUseCase.teamSize}
-                      onChange={(e) => setEditingUseCase({ ...editingUseCase, teamSize: e.target.value })}
-                      placeholder="4 specialists"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="duration">Duration</Label>
-                    <Input
-                      id="duration"
-                      value={editingUseCase.duration}
-                      onChange={(e) => setEditingUseCase({ ...editingUseCase, duration: e.target.value })}
-                      placeholder="3 months"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="timeline">Timeline</Label>
-                  <Input
-                    id="timeline"
-                    value={editingUseCase.timeline}
-                    onChange={(e) => setEditingUseCase({ ...editingUseCase, timeline: e.target.value })}
-                    placeholder="Q4 2023 - Q1 2024"
-                  />
-                </div>
-
-                <div>
-                  <Label>Technologies</Label>
-                  <Input
-                    value={editingUseCase.technologies.join(', ')}
-                    onChange={(e) => setEditingUseCase({ 
-                      ...editingUseCase, 
-                      technologies: e.target.value.split(',').map(tech => tech.trim()).filter(Boolean)
-                    })}
-                    placeholder="LangChain, Python, FastAPI"
-                  />
-                </div>
-
-                <div>
-                  <Label>Tags</Label>
-                  <Input
-                    value={editingUseCase.tags.join(', ')}
-                    onChange={(e) => setEditingUseCase({ 
-                      ...editingUseCase, 
-                      tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)
-                    })}
-                    placeholder="Finance, Automation, AI"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="featured"
-                    checked={editingUseCase.featured}
-                    onChange={(e) => setEditingUseCase({ ...editingUseCase, featured: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label htmlFor="featured">Featured Case Study</Label>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading success stories...</p>
         </div>
       </div>
     );
@@ -675,63 +471,92 @@ const UseCasesManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Use Cases Gallery</h2>
-          <p className="text-muted-foreground">Manage client success stories and case studies</p>
+          <h1 className="text-3xl font-bold">Use Cases & Success Stories</h1>
+          <p className="text-muted-foreground">Showcase real results and build credibility with proven implementations</p>
         </div>
-        <Button onClick={handleCreateNew}>
+        <Button onClick={() => setIsEditing(true)} className="bg-primary hover:bg-primary/90">
           <Plus className="w-4 h-4 mr-2" />
-          Add Use Case
+          Add Success Story
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Target className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Cases</p>
-                <p className="text-xl font-bold">{useCases.length}</p>
+                <p className="text-2xl font-bold">{useCases.length}</p>
               </div>
+              <Target className="w-8 h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Eye className="w-5 h-5 text-green-600" />
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Published</p>
-                <p className="text-xl font-bold">{publishedCount}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {useCases.filter(uc => uc.is_published).length}
+                </p>
               </div>
+              <Eye className="w-8 h-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Edit className="w-5 h-5 text-yellow-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Drafts</p>
-                <p className="text-xl font-bold">{draftCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Star className="w-5 h-5 text-purple-600" />
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Featured</p>
-                <p className="text-xl font-bold">{featuredCount}</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {useCases.filter(uc => uc.is_featured).length}
+                </p>
               </div>
+              <Star className="w-8 h-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Industries</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {new Set(useCases.map(uc => uc.industry).filter(Boolean)).size}
+                </p>
+              </div>
+              <Building2 className="w-8 h-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Avg ROI</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {useCases.filter(uc => uc.results?.roi_percentage).length > 0 
+                    ? Math.round(
+                        useCases
+                          .filter(uc => uc.results?.roi_percentage)
+                          .reduce((sum, uc) => sum + parseInt(uc.results?.roi_percentage || '0'), 0) / 
+                        useCases.filter(uc => uc.results?.roi_percentage).length
+                      ) + '%'
+                    : 'N/A'
+                  }
+                </p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
@@ -743,161 +568,670 @@ const UseCasesManagement = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search use cases..."
+                  placeholder="Search by title, industry, challenge, or tags..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
-            <select
-              value={filterIndustry}
-              onChange={(e) => setFilterIndustry(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background"
-            >
-              <option value="all">All Industries</option>
-              {industries.map(industry => (
-                <option key={industry} value={industry}>{industry}</option>
-              ))}
-            </select>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background"
-            >
-              <option value="all">All Status</option>
-              {statuses.map(status => (
-                <option key={status} value={status}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </option>
-              ))}
-            </select>
+            
+            <div className="flex gap-2">
+              <select
+                value={filterIndustry}
+                onChange={(e) => setFilterIndustry(e.target.value)}
+                className="px-3 py-2 border border-border rounded-md bg-background"
+              >
+                <option value="all">All Industries</option>
+                {industries.map(industry => (
+                  <option key={industry} value={industry}>
+                    {industry}
+                  </option>
+                ))}
+              </select>
+              
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-2 border border-border rounded-md bg-background"
+              >
+                <option value="all">All Status</option>
+                <option value="published">Published</option>
+                <option value="unpublished">Unpublished</option>
+                <option value="featured">Featured</option>
+              </select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Use Cases Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {filteredUseCases.map((useCase) => (
-          <Card key={useCase.id} className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Badge className={getCategoryColor(useCase.category)}>
-                    {useCase.category}
-                  </Badge>
-                  <Badge variant="outline">
-                    {useCase.industry}
-                  </Badge>
-                  {useCase.featured && (
-                    <Badge className="bg-yellow-100 text-yellow-700">
-                      <Star className="w-3 h-3 mr-1" />
-                      Featured
-                    </Badge>
-                  )}
-                </div>
-                <Badge className={getStatusColor(useCase.status)}>
-                  {useCase.status}
-                </Badge>
-              </div>
-
-              <h3 className="text-lg font-semibold mb-2">{useCase.title}</h3>
-              <p className="text-sm text-muted-foreground mb-2">Client: {useCase.clientName}</p>
-              <p className="text-sm text-muted-foreground mb-4">{useCase.description}</p>
-
-              {/* Metrics */}
-              <div className="grid grid-cols-3 gap-2 mb-4 text-xs">
-                <div className="text-center p-2 bg-blue-50 rounded">
-                  <div className="font-medium text-blue-700">{useCase.metrics.efficiency}</div>
-                  <div className="text-blue-600">Efficiency</div>
-                </div>
-                <div className="text-center p-2 bg-green-50 rounded">
-                  <div className="font-medium text-green-700">{useCase.metrics.accuracy}</div>
-                  <div className="text-green-600">Accuracy</div>
-                </div>
-                <div className="text-center p-2 bg-purple-50 rounded">
-                  <div className="font-medium text-purple-700">{useCase.metrics.cost}</div>
-                  <div className="text-purple-600">Cost Impact</div>
-                </div>
-              </div>
-
-              {/* Project Details */}
-              <div className="text-xs text-muted-foreground space-y-1 mb-4">
-                <div className="flex justify-between">
-                  <span>Duration:</span>
-                  <span>{useCase.duration}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Team Size:</span>
-                  <span>{useCase.teamSize}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Timeline:</span>
-                  <span>{useCase.timeline}</span>
-                </div>
-              </div>
-
-              {/* Technologies */}
-              <div className="flex flex-wrap gap-1 mb-4">
-                {useCase.technologies.slice(0, 3).map((tech, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {tech}
-                  </Badge>
-                ))}
-                {useCase.technologies.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{useCase.technologies.length - 3} more
-                  </Badge>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="flex space-x-2 pt-4 border-t">
-                <Button variant="outline" size="sm" onClick={() => handleEdit(useCase)} className="flex-1">
-                  <Edit className="w-3 h-3 mr-1" />
-                  Edit
+      {/* Use Cases List */}
+      <div className="grid gap-4">
+        {filteredUseCases.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No success stories found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm || filterIndustry !== 'all' || filterStatus !== 'all'
+                  ? 'Try adjusting your filters or search terms.'
+                  : 'Start building credibility by documenting your first success story.'
+                }
+              </p>
+              {!searchTerm && filterIndustry === 'all' && filterStatus === 'all' && (
+                <Button onClick={() => setIsEditing(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add First Success Story
                 </Button>
-                {useCase.status === 'draft' && (
-                  <Button variant="outline" size="sm" onClick={() => handlePublish(useCase.id)}>
-                    <Eye className="w-3 h-3 mr-1" />
-                    Publish
-                  </Button>
-                )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleDelete(useCase.id)}
-                  className="text-red-600 hover:text-red-700"
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredUseCases.map((useCase, index) => {
+            const metrics = getKeyMetrics(useCase);
+            return (
+              <Card key={useCase.id} className={`hover:shadow-md transition-shadow ${!useCase.is_published ? 'opacity-60' : ''}`}>
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Award className="w-6 h-6 text-primary" />
+                      </div>
+                      
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold">{useCase.title}</h3>
+                            {useCase.is_featured && (
+                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                            )}
+                            {!useCase.is_published && (
+                              <Badge variant="secondary">Draft</Badge>
+                            )}
+                            {useCase.industry && (
+                              <Badge variant="outline">{useCase.industry}</Badge>
+                            )}
+                            {useCase.metrics?.complexity_level && (
+                              <Badge className={getComplexityColor(useCase.metrics.complexity_level)}>
+                                {useCase.metrics.complexity_level}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            <span className="font-medium">Challenge:</span> {useCase.challenge}
+                          </p>
+                        </div>
+                        
+                        {/* Key Metrics Row */}
+                        <div className="flex flex-wrap gap-3 text-sm">
+                          {metrics.roi && (
+                            <span className="flex items-center gap-1 text-green-600">
+                              <TrendingUp className="w-3 h-3" />
+                              {metrics.roi}
+                            </span>
+                          )}
+                          {metrics.cost && (
+                            <span className="flex items-center gap-1 text-blue-600">
+                              <DollarSign className="w-3 h-3" />
+                              {metrics.cost}
+                            </span>
+                          )}
+                          {metrics.time && (
+                            <span className="flex items-center gap-1 text-purple-600">
+                              <Clock className="w-3 h-3" />
+                              {metrics.time}
+                            </span>
+                          )}
+                          {useCase.client_name && (
+                            <span className="flex items-center gap-1 text-gray-600">
+                              <Building2 className="w-3 h-3" />
+                              {useCase.client_name}
+                            </span>
+                          )}
+                          <span className="text-gray-500">Order: #{useCase.order_index + 1}</span>
+                        </div>
+                        
+                        {useCase.tags && useCase.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {useCase.tags.slice(0, 4).map((tag, tagIndex) => (
+                              <Badge key={tagIndex} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {useCase.tags.length > 4 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{useCase.tags.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 ml-4">
+                      {/* Reorder buttons */}
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleReorderUseCase(useCase.id, 'up')}
+                          disabled={index === 0}
+                          className="h-6 w-6 p-0"
+                        >
+                          <ArrowUp className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleReorderUseCase(useCase.id, 'down')}
+                          disabled={index === filteredUseCases.length - 1}
+                          className="h-6 w-6 p-0"
+                        >
+                          <ArrowDown className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      
+                      {/* Action buttons */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleToggleFeatured(useCase.id, useCase.is_featured)}
+                        className={useCase.is_featured ? "text-yellow-600" : ""}
+                      >
+                        <Star className={`w-4 h-4 ${useCase.is_featured ? 'fill-current' : ''}`} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleTogglePublished(useCase.id, useCase.is_published)}
+                        className={useCase.is_published ? "text-green-600" : "text-gray-600"}
+                      >
+                        {useCase.is_published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUseCase(useCase);
+                          setIsEditing(true);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteUseCase(useCase.id, useCase.title)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
+
+      {/* Create/Edit Use Case Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle>
+                {selectedUseCase ? 'Edit Success Story' : 'Add New Success Story'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="title">Success Story Title *</Label>
+                  <Input
+                    id="title"
+                    value={selectedUseCase ? selectedUseCase.title : newUseCase.title}
+                    onChange={(e) => {
+                      const title = e.target.value;
+                      if (selectedUseCase) {
+                        setSelectedUseCase({ ...selectedUseCase, title });
+                      } else {
+                        setNewUseCase({ ...newUseCase, title, slug: generateSlug(title) });
+                      }
+                    }}
+                    placeholder="e.g., 45% Cost Reduction in Manufacturing Operations"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="industry">Industry *</Label>
+                  <select
+                    id="industry"
+                    value={selectedUseCase ? selectedUseCase.industry || '' : newUseCase.industry}
+                    onChange={(e) => {
+                      const industry = e.target.value;
+                      if (selectedUseCase) {
+                        setSelectedUseCase({ ...selectedUseCase, industry });
+                      } else {
+                        setNewUseCase({ ...newUseCase, industry });
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                  >
+                    <option value="">Select Industry</option>
+                    {industries.map(industry => (
+                      <option key={industry} value={industry}>
+                        {industry}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="client_name">Client Name</Label>
+                  <Input
+                    id="client_name"
+                    value={selectedUseCase ? selectedUseCase.client_name || '' : newUseCase.client_name}
+                    onChange={(e) => {
+                      const client_name = e.target.value;
+                      if (selectedUseCase) {
+                        setSelectedUseCase({ ...selectedUseCase, client_name });
+                      } else {
+                        setNewUseCase({ ...newUseCase, client_name });
+                      }
+                    }}
+                    placeholder="Company Name (or leave blank for anonymous)"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="complexity_level">Project Complexity</Label>
+                  <select
+                    id="complexity_level"
+                    value={selectedUseCase ? selectedUseCase.metrics?.complexity_level || 'Medium' : newUseCase.metrics.complexity_level}
+                    onChange={(e) => {
+                      const complexity_level = e.target.value;
+                      if (selectedUseCase) {
+                        setSelectedUseCase({ 
+                          ...selectedUseCase, 
+                          metrics: { ...selectedUseCase.metrics, complexity_level } 
+                        });
+                      } else {
+                        setNewUseCase({ 
+                          ...newUseCase, 
+                          metrics: { ...newUseCase.metrics, complexity_level } 
+                        });
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                  >
+                    {complexityLevels.map(level => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {/* Challenge & Solution */}
+              <div>
+                <Label htmlFor="challenge">Business Challenge *</Label>
+                <Textarea
+                  id="challenge"
+                  value={selectedUseCase ? selectedUseCase.challenge || '' : newUseCase.challenge}
+                  onChange={(e) => {
+                    const challenge = e.target.value;
+                    if (selectedUseCase) {
+                      setSelectedUseCase({ ...selectedUseCase, challenge });
+                    } else {
+                      setNewUseCase({ ...newUseCase, challenge });
+                    }
+                  }}
+                  placeholder="Describe the specific business challenge or pain point the client was facing..."
+                  rows={3}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="solution">AI Solution Implemented</Label>
+                <Textarea
+                  id="solution"
+                  value={selectedUseCase ? selectedUseCase.solution || '' : newUseCase.solution}
+                  onChange={(e) => {
+                    const solution = e.target.value;
+                    if (selectedUseCase) {
+                      setSelectedUseCase({ ...selectedUseCase, solution });
+                    } else {
+                      setNewUseCase({ ...newUseCase, solution });
+                    }
+                  }}
+                  placeholder="Explain the AI solution you implemented and how it addressed the challenge..."
+                  rows={3}
+                />
+              </div>
+              
+              {/* Results & Metrics - This is where the magic happens! */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  Measurable Results & Impact
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="roi_percentage">ROI Percentage</Label>
+                    <Input
+                      id="roi_percentage"
+                      value={selectedUseCase ? selectedUseCase.results?.roi_percentage || '' : newUseCase.results.roi_percentage}
+                      onChange={(e) => {
+                        const roi_percentage = e.target.value;
+                        if (selectedUseCase) {
+                          setSelectedUseCase({ 
+                            ...selectedUseCase, 
+                            results: { ...selectedUseCase.results, roi_percentage } 
+                          });
+                        } else {
+                          setNewUseCase({ 
+                            ...newUseCase, 
+                            results: { ...newUseCase.results, roi_percentage } 
+                          });
+                        }
+                      }}
+                      placeholder="e.g., 250"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="cost_reduction">Cost Reduction</Label>
+                    <Input
+                      id="cost_reduction"
+                      value={selectedUseCase ? selectedUseCase.results?.cost_reduction || '' : newUseCase.results.cost_reduction}
+                      onChange={(e) => {
+                        const cost_reduction = e.target.value;
+                        if (selectedUseCase) {
+                          setSelectedUseCase({ 
+                            ...selectedUseCase, 
+                            results: { ...selectedUseCase.results, cost_reduction } 
+                          });
+                        } else {
+                          setNewUseCase({ 
+                            ...newUseCase, 
+                            results: { ...newUseCase.results, cost_reduction } 
+                          });
+                        }
+                      }}
+                      placeholder="e.g., $150K annually"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="time_saved">Time Savings</Label>
+                    <Input
+                      id="time_saved"
+                      value={selectedUseCase ? selectedUseCase.results?.time_saved || '' : newUseCase.results.time_saved}
+                      onChange={(e) => {
+                        const time_saved = e.target.value;
+                        if (selectedUseCase) {
+                          setSelectedUseCase({ 
+                            ...selectedUseCase, 
+                            results: { ...selectedUseCase.results, time_saved } 
+                          });
+                        } else {
+                          setNewUseCase({ 
+                            ...newUseCase, 
+                            results: { ...newUseCase.results, time_saved } 
+                          });
+                        }
+                      }}
+                      placeholder="e.g., 75% faster processing"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="efficiency_gain">Efficiency Improvement</Label>
+                    <Input
+                      id="efficiency_gain"
+                      value={selectedUseCase ? selectedUseCase.results?.efficiency_gain || '' : newUseCase.results.efficiency_gain}
+                      onChange={(e) => {
+                        const efficiency_gain = e.target.value;
+                        if (selectedUseCase) {
+                          setSelectedUseCase({ 
+                            ...selectedUseCase, 
+                            results: { ...selectedUseCase.results, efficiency_gain } 
+                          });
+                        } else {
+                          setNewUseCase({ 
+                            ...newUseCase, 
+                            results: { ...newUseCase.results, efficiency_gain } 
+                          });
+                        }
+                      }}
+                      placeholder="e.g., 3x productivity gain"
+                    />
+                  </div>
+                </div>
+                
+                {/* Custom Metrics */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Custom Metrics</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addCustomMetric}>
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Metric
+                    </Button>
+                  </div>
+                  
+                  {(selectedUseCase?.results?.custom_metrics || newUseCase.results.custom_metrics).map((metric, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                      <Input
+                        placeholder="Metric name"
+                        value={metric.metric}
+                        onChange={(e) => {
+                          const metrics = [...(selectedUseCase?.results?.custom_metrics || newUseCase.results.custom_metrics)];
+                          metrics[index] = { ...metrics[index], metric: e.target.value };
+                          if (selectedUseCase) {
+                            setSelectedUseCase({ 
+                              ...selectedUseCase, 
+                              results: { ...selectedUseCase.results, custom_metrics: metrics } 
+                            });
+                          } else {
+                            setNewUseCase({ 
+                              ...newUseCase, 
+                              results: { ...newUseCase.results, custom_metrics: metrics } 
+                            });
+                          }
+                        }}
+                      />
+                      <Input
+                        placeholder="Value"
+                        value={metric.value}
+                        onChange={(e) => {
+                          const metrics = [...(selectedUseCase?.results?.custom_metrics || newUseCase.results.custom_metrics)];
+                          metrics[index] = { ...metrics[index], value: e.target.value };
+                          if (selectedUseCase) {
+                            setSelectedUseCase({ 
+                              ...selectedUseCase, 
+                              results: { ...selectedUseCase.results, custom_metrics: metrics } 
+                            });
+                          } else {
+                            setNewUseCase({ 
+                              ...newUseCase, 
+                              results: { ...newUseCase.results, custom_metrics: metrics } 
+                            });
+                          }
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Description"
+                          value={metric.description}
+                          onChange={(e) => {
+                            const metrics = [...(selectedUseCase?.results?.custom_metrics || newUseCase.results.custom_metrics)];
+                            metrics[index] = { ...metrics[index], description: e.target.value };
+                            if (selectedUseCase) {
+                              setSelectedUseCase({ 
+                                ...selectedUseCase, 
+                                results: { ...selectedUseCase.results, custom_metrics: metrics } 
+                              });
+                            } else {
+                              setNewUseCase({ 
+                                ...newUseCase, 
+                                results: { ...newUseCase.results, custom_metrics: metrics } 
+                              });
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeCustomMetric(index)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Tags & Implementation Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="tags">Tags (comma separated)</Label>
+                  <Input
+                    id="tags"
+                    value={selectedUseCase ? selectedUseCase.tags?.join(', ') || '' : newUseCase.tags.join(', ')}
+                    onChange={(e) => {
+                      const tags = e.target.value.split(',').map(tag => tag.trim()).filter(Boolean);
+                      if (selectedUseCase) {
+                        setSelectedUseCase({ ...selectedUseCase, tags });
+                      } else {
+                        setNewUseCase({ ...newUseCase, tags });
+                      }
+                    }}
+                    placeholder="automation, ml, optimization, process-improvement"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="implementation_time">Implementation Time</Label>
+                  <Input
+                    id="implementation_time"
+                    value={selectedUseCase ? selectedUseCase.metrics?.implementation_time || '' : newUseCase.metrics.implementation_time}
+                    onChange={(e) => {
+                      const implementation_time = e.target.value;
+                      if (selectedUseCase) {
+                        setSelectedUseCase({ 
+                          ...selectedUseCase, 
+                          metrics: { ...selectedUseCase.metrics, implementation_time } 
+                        });
+                      } else {
+                        setNewUseCase({ 
+                          ...newUseCase, 
+                          metrics: { ...newUseCase.metrics, implementation_time } 
+                        });
+                      }
+                    }}
+                    placeholder="e.g., 6 weeks, 3 months"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedUseCase ? selectedUseCase.is_featured : newUseCase.is_featured}
+                    onChange={(e) => {
+                      const is_featured = e.target.checked;
+                      if (selectedUseCase) {
+                        setSelectedUseCase({ ...selectedUseCase, is_featured });
+                      } else {
+                        setNewUseCase({ ...newUseCase, is_featured });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Featured Success Story</span>
+                </label>
+                
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedUseCase ? selectedUseCase.is_published : newUseCase.is_published}
+                    onChange={(e) => {
+                      const is_published = e.target.checked;
+                      if (selectedUseCase) {
+                        setSelectedUseCase({ ...selectedUseCase, is_published });
+                      } else {
+                        setNewUseCase({ ...newUseCase, is_published });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Publish Immediately</span>
+                </label>
+              </div>
+              
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setSelectedUseCase(null);
+                    setNewUseCase({
+                      title: '',
+                      slug: '',
+                      industry: '',
+                      challenge: '',
+                      solution: '',
+                      results: {
+                        cost_reduction: '',
+                        time_saved: '',
+                        efficiency_gain: '',
+                        roi_percentage: '',
+                        custom_metrics: []
+                      },
+                      metrics: {
+                        implementation_time: '',
+                        team_size: '',
+                        complexity_level: 'Medium'
+                      },
+                      client_name: '',
+                      client_logo: '',
+                      featured_image: '',
+                      tags: [],
+                      is_featured: false,
+                      is_published: true,
+                      order_index: 0,
+                    });
+                  }}
                 >
-                  <Trash2 className="w-3 h-3" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (selectedUseCase) {
+                      handleUpdateUseCase(selectedUseCase.id, selectedUseCase);
+                    } else {
+                      handleCreateUseCase();
+                    }
+                  }}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {selectedUseCase ? 'Update Success Story' : 'Create Success Story'}
                 </Button>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {filteredUseCases.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No use cases found</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchTerm || filterIndustry !== 'all' || filterStatus !== 'all' 
-                ? 'Try adjusting your search or filters' 
-                : 'Create your first use case to get started'
-              }
-            </p>
-            {(!searchTerm && filterIndustry === 'all' && filterStatus === 'all') && (
-              <Button onClick={handleCreateNew}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create First Use Case
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        </div>
       )}
     </div>
   );

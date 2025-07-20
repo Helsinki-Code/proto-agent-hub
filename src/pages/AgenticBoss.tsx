@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { supabase } from '@/lib/supabase';
 import { 
   Shield, 
   Eye, 
@@ -18,15 +20,17 @@ import {
   Zap,
   BarChart3,
   Globe,
-  Settings
+  Settings,
+  Activity,
+  Database
 } from 'lucide-react';
 
 const AgenticBoss = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, login, isLoading } = useAdminAuth();
   const [formData, setFormData] = useState({
-    username: '',
+    identifier: '', // Can be either email or username
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -34,24 +38,74 @@ const AgenticBoss = () => {
   const [attemptCount, setAttemptCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [lockTimer, setLockTimer] = useState(0);
+  const [stats, setStats] = useState({
+    totalPosts: 0,
+    totalUsers: 0,
+    siteViews: 0,
+    systemStatus: 'Online'
+  });
 
-  // Check if already authenticated
+  // Redirect if already authenticated - FIXED ROUTE
+  if (isAuthenticated) {
+    return <Navigate to="/agentic-boss/dashboard" replace />;
+  }
+
+  // Load real-time stats from Supabase
   useEffect(() => {
-    const checkAuth = () => {
+    const loadStats = async () => {
       try {
-        const authData = sessionStorage.getItem('admin_auth');
-        if (authData) {
-          const parsed = JSON.parse(authData);
-          if (parsed.isAuthenticated && parsed.username === 'agenticuniverse') {
-            setIsAuthenticated(true);
-          }
-        }
+        // Get blog posts count
+        const { count: postsCount } = await supabase
+          .from('blog_posts')
+          .select('*', { count: 'exact', head: true });
+
+        // Get admin users count
+        const { count: usersCount } = await supabase
+          .from('admin_users')
+          .select('*', { count: 'exact', head: true });
+
+        // Get site views from analytics
+        const { data: analyticsData } = await supabase
+          .from('analytics_data')
+          .select('event_data')
+          .eq('event_type', 'page_view')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+        setStats({
+          totalPosts: postsCount || 0,
+          totalUsers: usersCount || 0,
+          siteViews: analyticsData?.length || 0,
+          systemStatus: 'Online'
+        });
       } catch (error) {
-        console.warn('Session storage check failed');
+        console.error('Error loading stats:', error);
+        setStats(prev => ({ ...prev, systemStatus: 'Error' }));
       }
     };
-    
-    checkAuth();
+
+    loadStats();
+
+    // Set up real-time subscriptions for stats
+    const postsSubscription = supabase
+      .channel('blog_posts_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'blog_posts' },
+        () => loadStats()
+      )
+      .subscribe();
+
+    const analyticsSubscription = supabase
+      .channel('analytics_changes')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'analytics_data' },
+        () => loadStats()
+      )
+      .subscribe();
+
+    return () => {
+      postsSubscription.unsubscribe();
+      analyticsSubscription.unsubscribe();
+    };
   }, []);
 
   // Lockout timer
@@ -67,10 +121,32 @@ const AgenticBoss = () => {
     }
   }, [lockTimer, isLocked]);
 
-  // If authenticated, redirect to dashboard
-  if (isAuthenticated) {
-    return <Navigate to="/admin-boss/dashboard" replace />;
-  }
+  const quickStats = [
+    {
+      label: "Blog Posts",
+      value: stats.totalPosts,
+      icon: BarChart3,
+      color: "text-blue-400"
+    },
+    {
+      label: "Admin Users",
+      value: stats.totalUsers,
+      icon: User,
+      color: "text-green-400"
+    },
+    {
+      label: "Today's Views",
+      value: stats.siteViews,
+      icon: Activity,
+      color: "text-yellow-400"
+    },
+    {
+      label: "System Status",
+      value: stats.systemStatus,
+      icon: Database,
+      color: stats.systemStatus === 'Online' ? "text-green-400" : "text-red-400"
+    }
+  ];
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -81,17 +157,17 @@ const AgenticBoss = () => {
     
     if (isLocked) {
       toast({
-        title: "Account Temporarily Locked",
+        title: "Account Temporarily Locked 🔒",
         description: `Please wait ${lockTimer} seconds before trying again.`,
         variant: "destructive",
       });
       return;
     }
 
-    if (!formData.username || !formData.password) {
+    if (!formData.identifier || !formData.password) {
       toast({
         title: "Missing Credentials",
-        description: "Please enter both username and password.",
+        description: "Please enter both username/email and password.",
         variant: "destructive",
       });
       return;
@@ -99,85 +175,89 @@ const AgenticBoss = () => {
 
     setIsSubmitting(true);
 
-    // Authentication delay for security
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const loginSuccess = await login(formData.identifier, formData.password);
 
-    // Check credentials
-    const isValidLogin = formData.username === 'agenticuniverse' && formData.password === 'universeboss';
-
-    if (isValidLogin) {
-      setIsAuthenticated(true);
-      
-      // Store auth state
-      try {
-        sessionStorage.setItem('admin_auth', JSON.stringify({
-          isAuthenticated: true,
-          username: formData.username,
-          timestamp: Date.now()
-        }));
-      } catch (error) {
-        console.warn('Session storage not available');
-      }
-
-      toast({
-        title: "Welcome Back, Universe Boss! 👑",
-        description: "Access granted. Loading your command center...",
-      });
-      
-      setTimeout(() => {
-        navigate('/admin-boss/dashboard');
-      }, 1000);
-    } else {
-      const newAttemptCount = attemptCount + 1;
-      setAttemptCount(newAttemptCount);
-      
-      if (newAttemptCount >= 3) {
-        setIsLocked(true);
-        setLockTimer(60);
+      if (loginSuccess) {
         toast({
-          title: "Too Many Failed Attempts",
-          description: "Account locked for 60 seconds for security.",
-          variant: "destructive",
+          title: "Welcome Back, Universe Boss! 👑",
+          description: "Access granted to command center.",
         });
+        
+        // Track successful login
+        await supabase
+          .from('analytics_data')
+          .insert({
+            event_type: 'admin_login_success',
+            event_data: { identifier: formData.identifier },
+            created_at: new Date().toISOString(),
+          });
+
+        navigate('/agentic-boss/dashboard');
       } else {
-        toast({
-          title: "Invalid Credentials",
-          description: `Access denied. ${3 - newAttemptCount} attempts remaining.`,
-          variant: "destructive",
-        });
+        const newAttemptCount = attemptCount + 1;
+        setAttemptCount(newAttemptCount);
+
+        // Track failed login
+        await supabase
+          .from('analytics_data')
+          .insert({
+            event_type: 'admin_login_failed',
+            event_data: { 
+              identifier: formData.identifier,
+              attempt_count: newAttemptCount 
+            },
+            created_at: new Date().toISOString(),
+          });
+
+        if (newAttemptCount >= 3) {
+          setIsLocked(true);
+          setLockTimer(300); // 5 minutes lockout
+          toast({
+            title: "Multiple Failed Attempts 🚨",
+            description: "Account locked for 5 minutes for security.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Access Denied ❌",
+            description: `Invalid credentials. ${3 - newAttemptCount} attempts remaining.`,
+            variant: "destructive",
+          });
+        }
       }
-      
-      setFormData({ username: '', password: '' });
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "System Error",
+        description: "Authentication system temporarily unavailable.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
-  const formatTime = (seconds: number) => {
-    return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
-  };
-
-  const quickStats = [
-    { label: 'Total Control', value: '100%', icon: Crown, color: 'text-yellow-600' },
-    { label: 'Site Performance', value: 'A+', icon: Zap, color: 'text-green-600' },
-    { label: 'Active Users', value: '1.2K', icon: BarChart3, color: 'text-blue-600' },
-    { label: 'Global Reach', value: '25+', icon: Globe, color: 'text-purple-600' }
-  ];
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+          <p className="text-white">Initializing Universe Boss Portal...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="w-full max-w-md relative z-10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse shadow-lg">
-            <Crown className="w-10 h-10 text-white" />
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-600 rounded-full flex items-center justify-center shadow-2xl">
+              <Crown className="w-8 h-8 text-white" />
+            </div>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">
             Universe Boss Portal
@@ -212,11 +292,11 @@ const AgenticBoss = () => {
               </Badge>
               <Badge variant="outline" className="text-blue-400 border-blue-400/50">
                 <Lock className="w-3 h-3 mr-1" />
-                Secured
+                Real-time
               </Badge>
               <Badge variant="outline" className="text-purple-400 border-purple-400/50">
-                <Settings className="w-3 h-3 mr-1" />
-                Real-time
+                <Database className="w-3 h-3 mr-1" />
+                Supabase
               </Badge>
             </div>
           </CardHeader>
@@ -226,52 +306,54 @@ const AgenticBoss = () => {
               <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-center">
                 <AlertTriangle className="w-6 h-6 text-red-400 mx-auto mb-2" />
                 <p className="text-red-300 text-sm font-medium">
-                  Access Temporarily Restricted
+                  Security Lockout Active
                 </p>
-                <p className="text-red-200 text-xs mt-1">
-                  Unlock in: {formatTime(lockTimer)}
+                <p className="text-red-400 text-xs">
+                  {Math.floor(lockTimer / 60)}:{(lockTimer % 60).toString().padStart(2, '0')} remaining
                 </p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-gray-200">
-                  Universe Boss Username
+              <div>
+                <Label htmlFor="identifier" className="text-white text-sm font-medium mb-2 block">
+                  Username or Email
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
-                    id="username"
+                    id="identifier"
                     type="text"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
-                    placeholder="Enter your supreme username"
+                    placeholder="agenticuniverse or info@agentic-ai.ltd"
+                    value={formData.identifier}
+                    onChange={(e) => handleInputChange('identifier', e.target.value)}
+                    className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-yellow-400"
                     disabled={isSubmitting || isLocked}
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    autoComplete="username"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-200">
-                  Master Password
+              <div>
+                <Label htmlFor="password" className="text-white text-sm font-medium mb-2 block">
+                  Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    placeholder="Enter your universe boss password"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    placeholder="Enter your boss-level password"
+                    className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-yellow-400"
                     disabled={isSubmitting || isLocked}
-                    className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                     disabled={isSubmitting || isLocked}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -307,15 +389,16 @@ const AgenticBoss = () => {
             <div className="text-center text-xs text-gray-400 space-y-1">
               <p>🔒 Universe Boss Access Only</p>
               <p>All activities monitored and logged</p>
-              <p className="text-yellow-400">⚡ Real-time dashboard ready</p>
+              <p className="text-yellow-400">⚡ Real-time Supabase powered</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Footer */}
         <div className="text-center mt-6 text-xs text-gray-500">
-          <p>AgenticAI Universe Boss Portal v2.0</p>
+          <p>AgenticAI Universe Boss Portal v3.0</p>
           <p>🌟 "Control the universe of AI automation"</p>
+          <p className="text-green-400">🚀 Now with real-time Supabase integration</p>
         </div>
       </div>
     </div>
