@@ -5,15 +5,39 @@
     { "path": "./tsconfig.node.json" }
   ],
   "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
+    
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    
+    /* Linting - Relaxed for development */
+    "strict": false,
     "noImplicitAny": false,
-    "noUnusedParameters": false,
-    "skipLibCheck": true,
-    "allowJs": true,
     "noUnusedLocals": false,
-    "strictNullChecks": false
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": false,
+    "strictNullChecks": false,
+    "allowJs": true,
+    
+    /* Additional options for better development experience */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true
   }
 }

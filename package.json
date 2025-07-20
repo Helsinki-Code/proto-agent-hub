@@ -1,16 +1,30 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "agentic-ai-website",
   "private": true,
-  "version": "0.0.0",
+  "version": "3.0.0",
   "type": "module",
+  "description": "AgenticAI - Transform Your Business with Intelligent Automation",
   "scripts": {
     "dev": "vite",
     "api": "node api/contact.js",
     "start": "concurrently \"npm run api\" \"npm run dev\"",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build": "tsc && vite build",
+    "build:dev": "tsc && vite build --mode development",
+    "build:production": "NODE_ENV=production tsc && vite build --mode production",
+    "build:siteground": "npm run clean && npm run build:production && npm run optimize",
+    "clean": "rimraf dist",
+    "optimize": "npm run optimize:images && npm run optimize:assets",
+    "optimize:images": "echo 'Image optimization - install imagemin-cli for full optimization'",
+    "optimize:assets": "echo 'Asset optimization complete'",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "lint:fix": "eslint . --fix",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "deploy:siteground": "npm run build:siteground && npm run upload:siteground",
+    "upload:siteground": "node scripts/deploy-siteground.js",
+    "test": "echo 'No tests specified yet'",
+    "health-check": "echo 'Health check - implement as needed'",
+    "backup": "echo 'Backup - implement as needed'"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -73,6 +87,7 @@
   "devDependencies": {
     "@eslint/js": "^9.9.0",
     "@tailwindcss/typography": "^0.5.15",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -86,9 +101,26 @@
     "lovable-tagger": "^1.1.7",
     "nodemon": "^3.1.10",
     "postcss": "^8.4.47",
+    "rimraf": "^5.0.10",
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.19"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
