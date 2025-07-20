@@ -53,7 +53,7 @@ RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
 # Don't rewrite assets, api, or static files
-RewriteCond %{REQUEST_URI} ^/(assets|api|images|fonts|favicon\.ico|robots\.txt|sitemap\.xml)
+RewriteCond %{REQUEST_URI} ^/(assets|api|images|fonts|favicon\.ico|robots\.txt|sitemap\.xml|sw\.js|manifest\.json)
 RewriteRule ^ - [L]
 
 # Send all other requests to index.html for React Router
@@ -272,12 +272,6 @@ const getProductionIndexHtml = (buildOutput) => {
       ]
     }
     </script>
-
-    <!-- Security Headers -->
-    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="X-Frame-Options" content="DENY" />
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
-    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
 
     <!-- Performance hints -->
     <meta http-equiv="Accept-CH" content="DPR, Viewport-Width, Width" />
@@ -939,4 +933,4 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   });
 }
 
-export { deploy };  
+export { deploy };
