@@ -70,9 +70,6 @@
     <link rel="dns-prefetch" href="//fonts.gstatic.com" />
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
 
-    <!-- Preload critical resources -->
-    <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin />
-
     <!-- Structured Data / JSON-LD -->
     <script type="application/ld+json">
     {
@@ -105,76 +102,11 @@
         "https://linkedin.com/company/agentic-ai",
         "https://twitter.com/agentic_ai",
         "https://github.com/agentic-ai"
-      ],
-      "service": {
-        "@type": "Service",
-        "name": "AI Automation Solutions",
-        "description": "Intelligent AI agents for business automation, workflow optimization, and autonomous task execution",
-        "provider": {
-          "@type": "Organization",
-          "name": "AgenticAI AMRO Ltd"
-        },
-        "areaServed": "Worldwide",
-        "hasOfferCatalog": {
-          "@type": "OfferCatalog",
-          "name": "AI Automation Services",
-          "itemListElement": [
-            {
-              "@type": "Offer",
-              "itemOffered": {
-                "@type": "Service",
-                "name": "Workflow Automation",
-                "description": "Automate complex business processes with AI-powered workflows"
-              }
-            },
-            {
-              "@type": "Offer",
-              "itemOffered": {
-                "@type": "Service",
-                "name": "AI Strategy Consulting",
-                "description": "Strategic guidance for AI transformation and implementation"
-              }
-            },
-            {
-              "@type": "Offer",
-              "itemOffered": {
-                "@type": "Service",
-                "name": "LLM Integration",
-                "description": "Seamlessly integrate large language models into your applications"
-              }
-            }
-          ]
-        }
-      }
+      ]
     }
     </script>
 
-    <!-- Website Performance and Analytics -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "AgenticAI",
-      "url": "https://agentic-ai.ltd",
-      "description": "Transform your business with intelligent AI automation",
-      "inLanguage": "en-US",
-      "isAccessibleForFree": true,
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": {
-          "@type": "EntryPoint",
-          "urlTemplate": "https://agentic-ai.ltd/search?q={search_term_string}"
-        },
-        "query-input": "required name=search_term_string"
-      },
-      "mainEntity": {
-        "@type": "Organization",
-        "name": "AgenticAI AMRO Ltd"
-      }
-    }
-    </script>
-
-    <!-- Security Headers (Content Security Policy will be handled by server/CDN) -->
+    <!-- Security Headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
@@ -183,72 +115,12 @@
     <!-- Performance hints -->
     <meta http-equiv="Accept-CH" content="DPR, Viewport-Width, Width" />
 
-    <!-- Additional Meta for Business -->
-    <meta name="rating" content="General" />
-    <meta name="distribution" content="Global" />
-    <meta name="coverage" content="Worldwide" />
-    <meta name="target" content="Business professionals, Enterprises, Technology leaders" />
-    <meta name="subject" content="AI Automation, Business Technology, Artificial Intelligence" />
-    <meta name="copyright" content="© 2025 AgenticAI AMRO Ltd. All rights reserved." />
-
-    <!-- Geo tagging for local SEO -->
-    <meta name="geo.region" content="GB-KEN" />
-    <meta name="geo.placename" content="Tunbridge Wells, Kent" />
-    <meta name="geo.position" content="51.1328;0.2637" />
-    <meta name="ICBM" content="51.1328, 0.2637" />
-
-    <!-- Mobile optimization -->
-    <meta name="format-detection" content="telephone=yes" />
-    <meta name="format-detection" content="address=yes" />
-    <meta name="format-detection" content="email=yes" />
-
-    <!-- App store and play store (for future mobile apps) -->
-    <meta name="apple-itunes-app" content="app-id=myAppStoreID, affiliate-data=myAffiliateData, app-argument=myURL" />
-    <meta name="google-play-app" content="app-id=com.agenticai.app" />
-
-    <!-- Verification meta tags (to be filled when setting up various services) -->
-    <!-- <meta name="google-site-verification" content="your-google-verification-code" /> -->
-    <!-- <meta name="msvalidate.01" content="your-bing-verification-code" /> -->
-    <!-- <meta name="yandex-verification" content="your-yandex-verification-code" /> -->
-    <!-- <meta name="p:domain_verify" content="your-pinterest-verification-code" /> -->
-
-    <!-- Rich Snippets preparation for future FAQ/How-to content -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "What is Agentic AI?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Agentic AI refers to autonomous AI systems that can independently plan, execute, and adapt their actions to achieve specific goals without constant human oversight. These AI agents work 24/7 to optimize business processes and drive results."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How quickly can AgenticAI be implemented?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Our AI automation solutions can be deployed and operational within 48 hours, with full enterprise integration typically completed within 1-2 weeks depending on complexity."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Is AgenticAI secure for enterprise use?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes, AgenticAI is built with enterprise-grade security, featuring SOC 2 compliance, end-to-end encryption, and comprehensive data protection measures suitable for Fortune 500 companies."
-          }
-        }
-      ]
-    }
-    </script>
+    <!-- Production CSS -->
+    <link rel="stylesheet" crossorigin href="/assets/index-D2Y6icPz.css">
   </head>
 
   <body>
-    <!-- Loading screen for better UX -->
+    <!-- Loading screen -->
     <div id="loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; display: flex; align-items: center; justify-content: center; z-index: 9999;">
       <div style="text-align: center;">
         <div style="width: 50px; height: 50px; border: 3px solid #f3f3f3; border-top: 3px solid #3B82F6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
@@ -265,10 +137,10 @@
     <!-- Main App Root -->
     <div id="root"></div>
 
-    <!-- Scripts -->
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Production JavaScript -->
+    <script type="module" crossorigin src="/assets/index-BSpZMR7a.js"></script>
 
-    <!-- Remove loading screen once app loads -->
+    <!-- Remove loading screen -->
     <script>
       window.addEventListener('load', function() {
         const loadingScreen = document.getElementById('loading-screen');
@@ -284,18 +156,19 @@
       });
     </script>
 
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/sw.js')
-        .then(function(registration) {
-          console.log('SW registered: ', registration);
-        })
-        .catch(function(registrationError) {
-          console.log('SW registration failed: ', registrationError);
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('SW registered: ', registration);
+            })
+            .catch(function(registrationError) {
+              console.log('SW registration failed: ', registrationError);
+            });
         });
-    });
-  }
-</script>
-</body>
+      }
+    </script>
+  </body>
 </html>

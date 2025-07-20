@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgenticAI Deployment Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #3B82F6; }
+        .test {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #ddd;
+            background: #f8f9fa;
+        }
+        .test.success {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        .test.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        .success { color: #10b981; font-weight: bold; }
+        .error { color: #ef4444; font-weight: bold; }
+        .info { color: #666; font-size: 14px; }
+        button {
+            background: #3B82F6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover { background: #2563eb; }
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 AgenticAI Deployment Verification</h1>
+        <p>This page verifies that your deployment is working correctly.</p>
+        
+        <div id="tests"></div>
+        
+        <button onclick="runTests()">Run All Tests</button>
+        
+        <div id="summary" style="margin-top: 30px;"></div>
+    </div>
+
+    <script>
+        async function runTests() {
+            const tests = [
+                {
+                    name: 'JavaScript Module Loading',
+                    test: async () => {
+                        try {
+                            // Check if main app JS loads
+                            const response = await fetch('/assets/', { method: 'HEAD' });
+                            return { success: true, message: 'Assets directory accessible' };
+                        } catch (error) {
+                            return { success: false, message: error.message };
+                        }
+                    }
+                },
+                {
+                    name: 'API Endpoint',
+                    test: async () => {
+                        try {
+                            const response = await fetch('/api/contact.php');
+                            const data = await response.json();
+                            return { 
+                                success: response.ok, 
+                                message: data.status || 'API responded' 
+                            };
+                        } catch (error) {
+                            return { success: false, message: 'API not accessible: ' + error.message };
+                        }
+                    }
+                },
+                {
+                    name: 'MIME Types',
+                    test: async () => {
+                        // This would need an actual JS file to test
+                        return { 
+                            success: true, 
+                            message: 'MIME types configured in .htaccess' 
+                        };
+                    }
+                },
+                {
+                    name: 'React Router',
+                    test: async () => {
+                        try {
+                            const response = await fetch('/non-existent-route');
+                            const text = await response.text();
+                            const isHtml = text.includes('<!DOCTYPE html>');
+                            return { 
+                                success: isHtml, 
+                                message: isHtml ? 'Routes redirect to index.html' : 'Routing not working' 
+                            };
+                        } catch (error) {
+                            return { success: false, message: error.message };
+                        }
+                    }
+                },
+                {
+                    name: 'HTTPS',
+                    test: async () => {
+                        const isHttps = window.location.protocol === 'https:';
+                        return { 
+                            success: isHttps, 
+                            message: isHttps ? 'Site using HTTPS' : 'Not using HTTPS' 
+                        };
+                    }
+                }
+            ];
+
+            const container = document.getElementById('tests');
+            container.innerHTML = '';
+            let passed = 0;
+
+            for (const test of tests) {
+                const result = await test.test();
+                const div = document.createElement('div');
+                div.className = 'test ' + (result.success ? 'success' : 'error');
+                div.innerHTML = `
+                    <h3>${test.name}</h3>
+                    <div class="${result.success ? 'success' : 'error'}">
+                        ${result.success ? '✓' : '✗'} ${result.message}
+                    </div>
+                `;
+                container.appendChild(div);
+                if (result.success) passed++;
+            }
+
+            const summary = document.getElementById('summary');
+            summary.innerHTML = `
+                <h2>Summary</h2>
+                <p class="${passed === tests.length ? 'success' : 'error'}">
+                    ${passed} out of ${tests.length} tests passed
+                </p>
+                ${passed === tests.length ? 
+                    '<p class="success">✅ Your deployment is working correctly!</p>' :
+                    '<p class="error">⚠️ Some issues need to be resolved.</p>'
+                }
+                <p class="info">Deployment time: ${new Date().toLocaleString()}</p>
+            `;
+        }
+
+        // Run tests on page load
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>

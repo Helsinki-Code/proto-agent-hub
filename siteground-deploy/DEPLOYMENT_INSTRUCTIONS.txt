@@ -1,0 +1,110 @@
+AGENTICAI SITEGROUND DEPLOYMENT INSTRUCTIONS
+===========================================
+
+Generated: 7/20/2025, 1:26:37 PM
+
+DEPLOYMENT CHECKLIST:
+--------------------
+[ ] Build completed successfully
+[ ] All files prepared in: /home/Helsinki-Code/proto-agent-hub/siteground-deploy
+[ ] .htaccess created with proper MIME types
+[ ] api/contact.php is ready
+[ ] index.html updated for production
+
+FILES TO UPLOAD:
+---------------
+1. ALL files and folders from: /home/Helsinki-Code/proto-agent-hub/siteground-deploy
+2. Including hidden files (.htaccess)
+3. Total size: Check folder size
+
+UPLOAD STEPS:
+------------
+1. Login to SiteGround Site Tools
+   URL: https://tools.siteground.com/
+
+2. Navigate to: Site > File Manager
+
+3. Go to public_html folder
+
+4. IMPORTANT: Delete these items first:
+   - index.html
+   - assets/ folder
+   - Any old build files
+   - Keep: api/ folder if it has custom files
+
+5. Upload files:
+   - Click "Upload" button
+   - Enable "Show Hidden Files" 
+   - Select ALL files from /home/Helsinki-Code/proto-agent-hub/siteground-deploy
+   - Wait for upload to complete
+
+6. Verify uploads:
+   - Check that .htaccess is present
+   - Check that assets/ folder has JS/CSS files
+   - Check that api/contact.php exists
+
+7. Set permissions (if needed):
+   - Files: 644
+   - Folders: 755
+   - api/contact.php: 644
+
+8. Clear cache:
+   - Site Tools > Speed > Caching > Flush Cache
+
+TESTING:
+--------
+1. Basic test: https://agentic-ai.ltd
+   - Should load without errors
+   - Check browser console for errors
+
+2. Verification test: https://agentic-ai.ltd/verify-deployment.html
+   - Run all tests
+   - All should pass
+
+3. API test: https://agentic-ai.ltd/api/contact.php
+   - Should return JSON response
+
+4. Router test: https://agentic-ai.ltd/services
+   - Should load the services page
+   - Should NOT show 404
+
+TROUBLESHOOTING:
+---------------
+1. MIME type error:
+   - Check .htaccess is uploaded
+   - Verify it's not being overridden
+
+2. 404 errors on assets:
+   - Check assets/ folder exists
+   - Verify file names match
+
+3. API not working:
+   - Check api/contact.php permissions
+   - Test PHP version (needs 7.4+)
+
+4. Blank page:
+   - Check browser console
+   - Verify index.html is correct
+
+ROLLBACK:
+---------
+If issues occur:
+1. Keep backup of old files
+2. Re-upload previous working version
+3. Contact support with error details
+
+SUPPORT:
+--------
+- SiteGround Support: Available 24/7 via chat
+- Error logs: Site Tools > Statistics > Error Log
+
+FINAL CHECKLIST:
+---------------
+[ ] Site loads without errors
+[ ] All pages work (test navigation)
+[ ] Contact form works
+[ ] No console errors
+[ ] HTTPS is working
+[ ] Performance is good
+
+Deployment completed successfully? Great job! 🎉
